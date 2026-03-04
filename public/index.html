@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="SourceBot - Application de prospection B2B pour trouver et contacter les sous-traitants"
+    />
+    <title>SourceBot - Prospection B2B Automatisée</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="logo">
+          <h1>🤖 SourceBot</h1>
+          <p>Prospection B2B Automatisée</p>
+        </div>
+      </header>
+
+      <main>
+        <section class="form-container">
+          <h2>Rechercher des Sous-Traitants</h2>
+          <form id="searchForm" class="search-form">
+            <div class="form-group">
+              <label for="category">Catégorie / Métier</label>
+              <input
+                type="text"
+                id="category"
+                name="category"
+                placeholder="Ex: Plomberie, Électricité, Menuiserie..."
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="description">Description du besoin</label>
+              <textarea
+                id="description"
+                name="description"
+                placeholder="Décrivez votre besoin en détail..."
+                rows="4"
+                required
+              ></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="country">Pays</label>
+                <select id="country" name="country" required>
+                  <option value="">Sélectionner...</option>
+                  <option value="France">France</option>
+                  <option value="Belgique">Belgique</option>
+                  <option value="Suisse">Suisse</option>
+                  <option value="Luxembourg">Luxembourg</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="radius">Rayon (km)</label>
+                <input
+                  type="number"
+                  id="radius"
+                  name="radius"
+                  placeholder="100"
+                  min="10"
+                  max="3000"
+                  value="100"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="budget">Budget (€) - Optionnel</label>
+              <input type="number" id="budget" name="budget" placeholder="Budget indicatif" />
+            </div>
+
+            <div class="form-group">
+              <label for="attachments">Fichiers à joindre</label>
+              <input type="file" id="attachments" name="attachments" multiple />
+              <small>Documents de spécification, plans, cahier des charges...</small>
+            </div>
+
+            <button type="submit" class="btn-primary">
+              🔍 Lancer la Recherche
+            </button>
+          </form>
+        </section>
+
+        <section class="results-container" id="resultsContainer" style="display: none">
+          <h2>Résultats</h2>
+          <div id="resultsList" class="results-list"></div>
+        </section>
+
+        <section class="info-container">
+          <h2>Comment ça marche ?</h2>
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-icon">🔎</div>
+              <h3>Recherche</h3>
+              <p>SourceBot find entreprises dans votre secteur via Google Places API</p>
+            </div>
+
+            <div class="info-card">
+              <div class="info-icon">📧</div>
+              <h3>Contact</h3>
+              <p>Extraction automatique des emails depuis les sites web</p>
+            </div>
+
+            <div class="info-card">
+              <div class="info-icon">💌</div>
+              <h3>Envoi</h3>
+              <p>Envoi de demandes de devis professionnelles et traçables</p>
+            </div>
+
+            <div class="info-card">
+              <div class="info-icon">✅</div>
+              <h3>Suivi</h3>
+              <p>Réception et parsing automatiques des devis</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="rgpd-notice">
+          <h3>📋 Conformité RGPD</h3>
+          <p>
+            SourceBot respecte la réglementation RGPD et la loi Informatique et Libertés.
+            Prospection B2B autorisée. Tous les destinataires reçoivent un lien unsubscribe.
+            <a href="/privacy" target="_blank">Voir notre politique de confidentialité</a>
+          </p>
+        </section>
+      </main>
+
+      <footer>
+        <p>&copy; 2026 SourceBot. Tous droits réservés. | Développé avec ❤️</p>
+      </footer>
+    </div>
+
+    <script src="/js/app.js"></script>
+  </body>
+</html>

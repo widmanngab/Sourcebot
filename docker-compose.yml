@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  sourcebot-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sourcebot-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - sourcebot-db
+    networks:
+      - sourcebot-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  sourcebot-db:
+    image: postgres:15-alpine
+    container_name: sourcebot-db
+    environment:
+      - POSTGRES_DB=sourcebot
+      - POSTGRES_USER=sourcebot
+      - POSTGRES_PASSWORD=sourcebot_dev_password
+    volumes:
+      - sourcebot-db-data:/var/lib/postgresql/data
+    networks:
+      - sourcebot-network
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U sourcebot" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sourcebot-db-data:
+    driver: local
+
+networks:
+  sourcebot-network:
+    driver: bridge
