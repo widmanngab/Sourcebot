@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import logger from './utils/logger.js';
 import searchRoutes from './routes/searchRoutes.js';
+import scrapingRoutes from './routes/scrapingRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -45,6 +46,9 @@ app.get('/api', (req, res) => {
 
 // Use search routes
 app.use('/api', searchRoutes);
+
+// Use scraping routes
+app.use('/api', scrapingRoutes);
 
 // 404 handler
 app.use((req, res) => {
