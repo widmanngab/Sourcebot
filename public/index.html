@@ -9,6 +9,7 @@
     />
     <title>SourceBot - Prospection B2B Automatisée</title>
     <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/app.css" />
   </head>
   <body>
     <div class="container">
@@ -21,40 +22,30 @@
 
       <main>
         <section class="form-container">
-          <h2>Rechercher des Sous-Traitants</h2>
+          <h2>🔍 Trouvez des Entreprises & Leurs Emails</h2>
           <form id="searchForm" class="search-form">
             <div class="form-group">
-              <label for="category">Catégorie / Métier</label>
+              <label for="keyword">Type d'entreprise (ex: plombiers, électriciens)</label>
               <input
                 type="text"
-                id="category"
-                name="category"
-                placeholder="Ex: Plomberie, Électricité, Menuiserie..."
+                id="keyword"
+                name="keyword"
+                placeholder="Ex: plombiers, charpentiers, électriciens..."
                 required
               />
             </div>
 
-            <div class="form-group">
-              <label for="description">Description du besoin</label>
-              <textarea
-                id="description"
-                name="description"
-                placeholder="Décrivez votre besoin en détail..."
-                rows="4"
-                required
-              ></textarea>
-            </div>
-
             <div class="form-row">
               <div class="form-group">
-                <label for="country">Pays</label>
-                <select id="country" name="country" required>
-                  <option value="">Sélectionner...</option>
-                  <option value="France">France</option>
-                  <option value="Belgique">Belgique</option>
-                  <option value="Suisse">Suisse</option>
-                  <option value="Luxembourg">Luxembourg</option>
-                </select>
+                <label for="location">Région/Ville</label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  placeholder="Ex: Paris, Lyon..."
+                  value="France"
+                  required
+                />
               </div>
 
               <div class="form-group">
@@ -63,36 +54,45 @@
                   type="number"
                   id="radius"
                   name="radius"
-                  placeholder="100"
+                  placeholder="50"
                   min="10"
-                  max="3000"
-                  value="100"
+                  max="500"
+                  value="50"
                   required
                 />
               </div>
             </div>
 
-            <div class="form-group">
-              <label for="budget">Budget (€) - Optionnel</label>
-              <input type="number" id="budget" name="budget" placeholder="Budget indicatif" />
-            </div>
-
-            <div class="form-group">
-              <label for="attachments">Fichiers à joindre</label>
-              <input type="file" id="attachments" name="attachments" multiple />
-              <small>Documents de spécification, plans, cahier des charges...</small>
-            </div>
-
             <button type="submit" class="btn-primary">
-              🔍 Lancer la Recherche
+              ⚡ Rechercher & Scraper Emails
             </button>
           </form>
         </section>
 
+        <div id="loading" class="loading" style="display: none;">
+          <div class="spinner"></div>
+          <p>Recherche en cours... Patience, le scraping des sites peut prendre quelques minutes ⏳</p>
+        </div>
+
         <section class="results-container" id="resultsContainer" style="display: none">
-          <h2>Résultats</h2>
+          <div class="results-header">
+            <h2>📊 Résultats</h2>
+            <div class="results-stats">
+              <span class="stat">
+                📍 <strong id="totalCompanies">0</strong> entreprises trouvées
+              </span>
+              <span class="stat">
+                📧 <strong id="companiesWithEmails">0</strong> avec emails extraits
+              </span>
+              <span class="stat">
+                ⏱️ <strong id="duration">0</strong>s
+              </span>
+            </div>
+          </div>
           <div id="resultsList" class="results-list"></div>
         </section>
+
+        <div id="error" class="error-message" style="display: none;"></div>
 
         <section class="info-container">
           <h2>Comment ça marche ?</h2>
@@ -139,5 +139,6 @@
     </div>
 
     <script src="/js/app.js"></script>
+    <script src="/js/frontend.js"></script>
   </body>
 </html>
