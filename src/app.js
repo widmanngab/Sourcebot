@@ -6,6 +6,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import logger from './utils/logger.js';
+import searchRoutes from './routes/searchRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -37,10 +38,13 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Routes API (à implémenter)
+// Routes API
 app.get('/api', (req, res) => {
   res.json({ message: 'API SourceBot v1.0.0', timestamp: new Date().toISOString() });
 });
+
+// Use search routes
+app.use('/api', searchRoutes);
 
 // 404 handler
 app.use((req, res) => {
