@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import logger from './utils/logger.js';
 import searchRoutes from './routes/searchRoutes.js';
 import scrapingRoutes from './routes/scrapingRoutes.js';
+import emailRoutes from './routes/emailRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -49,6 +50,9 @@ app.use('/api', searchRoutes);
 
 // Use scraping routes
 app.use('/api', scrapingRoutes);
+
+// Use email routes
+app.use('/api', emailRoutes);
 
 // 404 handler
 app.use((req, res) => {
