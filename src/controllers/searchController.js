@@ -83,13 +83,17 @@ class SearchController {
     } catch (error) {
       logger.error('❌ Search controller error', { 
         error: error.message,
-        stack: error.stack 
+        stack: error.stack,
+        errorType: error.constructor.name,
+        details: error.response?.data || error.config,
       });
       
       return res.status(500).json({
         error: 'Search failed',
         status: 'error',
         message: error.message,
+        errorType: error.constructor.name,
+        apiError: error.response?.data || null,
       });
     }
   }

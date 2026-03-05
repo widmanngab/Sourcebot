@@ -26,7 +26,11 @@ class GooglePlacesService {
       });
 
       if (response.data.status !== 'OK') {
-        logger.warn(`⚠️ Text Search status: ${response.data.status}`);
+        logger.error(`❌ Text Search failed with status: ${response.data.status}`, {
+          status: response.data.status,
+          errorMessage: response.data.error_message,
+          query: `${query} ${location}`,
+        });
         return [];
       }
 
@@ -58,7 +62,12 @@ class GooglePlacesService {
       });
 
       if (response.data.status !== 'OK') {
-        logger.warn(`⚠️ Nearby Search status: ${response.data.status}`);
+        logger.error(`❌ Nearby Search failed with status: ${response.data.status}`, {
+          status: response.data.status,
+          errorMessage: response.data.error_message,
+          location: `${latitude},${longitude}`,
+          keyword,
+        });
         return [];
       }
 
@@ -103,7 +112,11 @@ class GooglePlacesService {
       });
 
       if (response.data.status !== 'OK') {
-        logger.warn(`⚠️ Place Details status: ${response.data.status}`);
+        logger.error(`❌ Place Details failed with status: ${response.data.status}`, {
+          status: response.data.status,
+          errorMessage: response.data.error_message,
+          placeId,
+        });
         return null;
       }
 
@@ -158,6 +171,7 @@ class GooglePlacesService {
         const batchPromises = batch.map(async (result) => {
           try {
             const details = await this.getPlaceDetails(result.place_id);
+            logger.debug(`✓ Got details for: ${details?.name || result.name}`);
             return {
               placeId: result.place_id,
               name: details?.name || result.name || 'N/A',
@@ -171,7 +185,13 @@ class GooglePlacesService {
               businessStatus: details?.businessStatus || 'UNKNOWN',
             };
           } catch (error) {
-            logger.warn(`⚠️ Failed to get details for ${result.name}:`, error.message);
+            logger.error(`❌ Failed to get details for ${result.name}:`, { 
+              name: result.name,
+              placeId: result.place_id,
+              error: error.message,
+              statusCode: error.response?.status,
+              apiStatus: error.response?.data?.status
+            });
             return {
               placeId: result.place_id,
               name: result.name || 'N/A',
