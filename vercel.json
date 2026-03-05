@@ -1,11 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "npm prune --production",
+  "buildCommand": "",
   "outputDirectory": "public",
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ]
+  "github": {
+    "silent": true
+  }
 }
