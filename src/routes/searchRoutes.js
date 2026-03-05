@@ -35,6 +35,28 @@ router.get('/diagnostic', (req, res) => {
 });
 
 /**
+ * GET /api/test-google-places
+ * Test Google Places API with a simple query
+ */
+router.get('/test-google-places', async (req, res) => {
+  try {
+    const testResults = await searchController.testGooglePlaces();
+    return res.json({
+      status: 'success',
+      test: 'Google Places API connectivity test',
+      results: testResults,
+    });
+  } catch (error) {
+    return res.json({
+      status: 'error',
+      test: 'Google Places API connectivity test',
+      error: error.message,
+      details: error.response?.data || 'No additional details available',
+    });
+  }
+});
+
+/**
  * POST /api/search
  * Search for companies
  * Body: { keyword, location, radius }
