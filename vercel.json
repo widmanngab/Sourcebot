@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "public": "public",
   "buildCommand": "echo 'Frontend deployed to Vercel'",
-  "framework": null
+  "outputDirectory": "public"
 }
