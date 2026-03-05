@@ -1,538 +1,646 @@
-// SourceBot Client - Application Frontend
+// SourceBot Client - Application Frontend with 4-Stage Devis Workflow
 
-// Configuration API - Pointer vers le backend Railway
-const API_URL = 'https://sourcebot-production.up.railway.app';
+// Configuration API - Déterminer l'URL de l'API selon l'environnement
+// Note: Pour déploiement en production, modifier RAILWAY_BACKEND_URL ci-dessous
+let API_URL;
+
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  API_URL = 'http://localhost:3000';
+} else {
+  // Production: Railway backend URL - À METTRE À JOUR après déploiement Railway
+  const RAILWAY_BACKEND_URL = 'https://sourcebot-production.up.railway.app'; // Remplacer par votre URL Railway
+  API_URL = RAILWAY_BACKEND_URL;
+}
+
+// =============================================================================
+// STATE MANAGEMENT
+// =============================================================================
+
+const state = {
+  currentStep: 1,
+  searchResults: [],
+  selectedCompanies: new Set(),
+  quoteDetails: {
+    firstName: '',
+    lastName: '',
+    email: '',
+    description: '',
+    files: [],
+  },
+  emailTemplate: '',
+  testMode: false,
+  testEmail: null,
+};
+
+// =============================================================================
+// INITIALIZATION
+// =============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const searchForm = document.getElementById('searchForm');
-  const resultsContainer = document.getElementById('resultsContainer');
-  const resultsList = document.getElementById('resultsList');
-  
-  // State
-  let currentResults = [];
-  let testMode = false;
-  let testEmail = null;
-  
-  // Charger la configuration (mode test, etc)
+  // Load config
   try {
     const configResponse = await fetch(`${API_URL}/api/config`);
     const config = await configResponse.json();
-    testMode = config.testMode;
-    testEmail = config.testEmail;
-    
-    if (testMode) {
+    state.testMode = config.testMode;
+    state.testEmail = config.testEmail;
+
+    if (state.testMode) {
       showTestModeBanner();
-      console.log(`🧪 TEST MODE ENABLED - Emails will be sent to: ${testEmail}`);
+      console.log(`🧪 TEST MODE ENABLED - Emails will be sent to: ${state.testEmail}`);
     }
   } catch (error) {
     console.warn('Could not load config:', error);
   }
-  
-  // Charger les infos client depuis localStorage au démarrage
-  loadClientInfoFromStorage();
-  
-  // Bouton pour modifier les infos client
-  addClientInfoButton();
 
-  // Gestion du formulaire
-  searchForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  // Setup event listeners
+  setupSearchForm();
+  setupQuoteDetailsForm();
+  setupEmailTemplate();
+  setupCompaniesSelection();
+  setupStepNavigation();
+});
 
-    const formData = new FormData(searchForm);
-    
-    // Récupérer les données du formulaire avec les bons noms
-    const keyword = formData.get('keyword');
-    const location = formData.get('location') || 'France';
-    const radius = parseInt(formData.get('radius'), 10) || 100;
-    
-    const data = {
-      keyword: keyword.trim(),
-      location: location,
-      radius: radius,
-    };
+// =============================================================================
+// STEP 1: SEARCH
+// =============================================================================
 
-    console.log('📤 Envoi de la requête:', data);
-    
-    // Enregistrer le temps de début
-    const startTime = Date.now();
+function setupSearchForm() {
+  const form = document.getElementById('searchForm');
+  form.addEventListener('submit', handleSearch);
+}
 
-    try {
-      // Désactiver le bouton lors de l'envoi
-      const submitBtn = searchForm.querySelector('.btn-primary');
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span class="spinner"></span> Recherche en cours...';
+async function handleSearch(e) {
+  e.preventDefault();
 
-      // Appeler l'API backend
-      const response = await fetch(`${API_URL}/api/search`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+  const formData = new FormData(document.getElementById('searchForm'));
+  const keyword = formData.get('keyword');
+  const location = formData.get('location');
+  const radius = formData.get('radius');
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Erreur HTTP: ${response.status}`);
-      }
-
-      const responseData = await response.json();
-      console.log('📥 Réponse du serveur:', responseData);
-      
-      // Calculer le temps écoulé
-      const endTime = Date.now();
-      const duration = Math.round((endTime - startTime) / 1000);
-      
-      // Afficher les résultats (extraire le tableau de résultats)
-      const results = responseData.results || [];
-      currentResults = results; // Stocker pour utilisation ultérieure
-      displayResults(results, duration);
-      resultsContainer.style.display = 'block';
-      resultsContainer.scrollIntoView({ behavior: 'smooth' });
-
-      // Afficher le nombre de résultats trouvés
-      if (results.length > 0) {
-        showAlert(`✅ ${results.length} résultat(s) trouvé(s)!`, 'success');
-      } else {
-        showAlert('Aucun résultat trouvé pour votre recherche.', 'info');
-      }
-
-      // Réactiver le bouton
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '🔍 Lancer la Recherche';
-    } catch (error) {
-      console.error('❌ Erreur:', error);
-      showAlert(`Erreur: ${error.message}`, 'error');
-
-      // Réactiver le bouton
-      const submitBtn = searchForm.querySelector('.btn-primary');
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '🔍 Lancer la Recherche';
-    }
-  });
-
-  // Afficher les résultats
-  function displayResults(companies, duration = 0) {
-    if (!companies || companies.length === 0) {
-      resultsList.innerHTML =
-        '<p style="grid-column: 1/-1; text-align: center; color: #64748b;">Aucun résultat trouvé</p>';
-      return;
-    }
-
-    // Calculer les statistiques
-    const totalCompanies = companies.length;
-    const companiesWithEmails = companies.filter(c => c.emails && c.emails.length > 0).length;
-    
-    // Mettre à jour les éléments de stats
-    const totalCompaniesEl = document.getElementById('totalCompanies');
-    const companiesWithEmailsEl = document.getElementById('companiesWithEmails');
-    const durationEl = document.getElementById('duration');
-    
-    if (totalCompaniesEl) totalCompaniesEl.textContent = totalCompanies;
-    if (companiesWithEmailsEl) companiesWithEmailsEl.textContent = companiesWithEmails;
-    if (durationEl) durationEl.textContent = duration;
-
-    resultsList.innerHTML = companies
-      .map(
-        (company, index) => `
-      <div class="result-card">
-        <h4>${escapeHtml(company.name || 'N/A')}</h4>
-        <p><strong>Adresse:</strong> ${escapeHtml(company.address || 'N/A')}</p>
-        ${company.phone ? `<p><strong>Téléphone:</strong> <a href="tel:${company.phone}">${escapeHtml(company.phone)}</a></p>` : ''}
-        ${company.website ? `<p><strong>Site:</strong> <a href="${escapeHtml(company.website)}" target="_blank" rel="noopener">Visiter</a></p>` : ''}
-        ${company.rating ? `<p><strong>Note:</strong> ⭐ ${company.rating}/5 (${company.reviewCount || 0} avis)</p>` : ''}
-        ${company.emails && company.emails.length > 0 ? `
-          <div class="emails-section">
-            <strong>📧 Emails trouvés (${company.emails.length}):</strong>
-            <ul style="margin: 5px 0; padding-left: 20px;">
-              ${company.emails.map(email => `<li><a href="mailto:${email}">${escapeHtml(email)}</a></li>`).join('')}
-            </ul>
-            <button class="btn-send-email" data-company-index="${index}" style="margin-top: 10px; padding: 8px 15px; background-color: #10b981; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
-              📧 Envoyer un devis
-            </button>
-          </div>
-        ` : '<p style="color: #ea580c;">📧 Aucun email trouvé</p>'}
-        <span class="result-badge">ID: ${escapeHtml(company.placeId || `Result #${index + 1}`)}</span>
-      </div>
-    `
-      )
-      .join('');
-    
-    // Ajouter les event listeners aux boutons
-    document.querySelectorAll('.btn-send-email').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const index = parseInt(btn.getAttribute('data-company-index'));
-        const company = currentResults[index];
-        await sendEmailToCompany(company, btn);
-      });
-    });
+  if (!keyword || !location) {
+    showError('Veuillez remplir tous les champs requis');
+    return;
   }
 
-  // Envoyer un email à une entreprise
-  async function sendEmailToCompany(company, btnElement) {
-    // Vérifier que les infos du client sont remplies
-    const clientInfo = getClientInfo();
-    if (!clientInfo) {
-      showAlert('❌ Veuillez remplir vos informations de contact d\'abord!', 'error');
-      return;
+  const loading = document.getElementById('loading');
+  const resultsContainer = document.getElementById('resultsContainer');
+  const resultsList = document.getElementById('resultsList');
+  const error = document.getElementById('error');
+
+  loading.style.display = 'block';
+  resultsContainer.style.display = 'none';
+  error.style.display = 'none';
+
+  const startTime = Date.now();
+
+  try {
+    const response = await fetch(`${API_URL}/api/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keyword, location, radius: parseInt(radius) }),
+    });
+
+    if (!response.ok) throw new Error('API Error');
+
+    const data = await response.json();
+    state.searchResults = data.results || [];
+    state.selectedCompanies.clear(); // Reset selection
+
+    const duration = Math.round((Date.now() - startTime) / 1000);
+
+    // Update stats
+    document.getElementById('totalCompanies').textContent = state.searchResults.length;
+    document.getElementById('companiesWithEmails').textContent = state.searchResults.filter(
+      (c) => c.emails && c.emails.length > 0
+    ).length;
+    document.getElementById('duration').textContent = duration;
+
+    // Display results
+    displayResults();
+    resultsContainer.style.display = 'block';
+  } catch (error) {
+    console.error('Search error:', error);
+    showError(`Erreur: ${error.message}`);
+  } finally {
+    loading.style.display = 'none';
+  }
+}
+
+function displayResults() {
+  const resultsList = document.getElementById('resultsList');
+  resultsList.innerHTML = '';
+
+  if (state.searchResults.length === 0) {
+    resultsList.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>Aucune entreprise trouvée</p></div>';
+    return;
+  }
+
+  state.searchResults.forEach((company) => {
+    const card = createCompanyCard(company);
+    resultsList.appendChild(card);
+  });
+}
+
+function createCompanyCard(company) {
+  const card = document.createElement('div');
+  card.className = 'company-card';
+
+  const emails = company.emails && company.emails.length > 0 ? company.emails : [];
+  const emailsHtml = emails.map((email) => `<a href="mailto:${email}">${email}</a>`).join('<br>');
+
+  card.innerHTML = `
+    <div class="company-header">
+      <div class="company-name">${company.name || 'N/A'}</div>
+      ${company.rating ? `<div class="company-rating">⭐ ${company.rating}</div>` : ''}
+    </div>
+    <div class="company-info">
+      <div class="company-info-item">
+        <strong>📍 Adresse:</strong>
+        <span>${company.address || 'N/A'}</span>
+      </div>
+      <div class="company-info-item">
+        <strong>📞 Tél:</strong>
+        <span>${company.phone || 'N/A'}</span>
+      </div>
+      <div class="company-info-item">
+        <strong>🌐 Site:</strong>
+        ${company.website ? `<a href="${company.website}" target="_blank">${company.website}</a>` : '<span>N/A</span>'}
+      </div>
+      <div class="company-info-item">
+        <strong>📧 Emails:</strong>
+        <span>${emails.length > 0 ? 'Trouvés ✓' : 'Non trouvés ✗'}</span>
+      </div>
+    </div>
+    ${emails.length > 0 ? `<div class="company-emails"><div class="company-emails-title">Emails extraits:</div><div class="emails-list">${emailsHtml}</div></div>` : ''}
+  `;
+
+  return card;
+}
+
+// =============================================================================
+// STEP 2: QUOTE DETAILS
+// =============================================================================
+
+function setupQuoteDetailsForm() {
+  const form = document.getElementById('quoteDetailsForm');
+
+  // Character counter
+  const description = document.getElementById('projectDescription');
+  description.addEventListener('input', (e) => {
+    const count = e.target.value.length;
+    document.getElementById('charCount').textContent = `${count} / 5000 caractères`;
+  });
+
+  // File upload handling
+  const filesInput = document.getElementById('projectFiles');
+  filesInput.addEventListener('change', handleFileUpload);
+
+  // Files important checkbox
+  document.getElementById('filesImportant').addEventListener('change', (e) => {
+    state.quoteDetails.filesImportant = e.target.checked;
+  });
+
+  // Companies dropdown change handler
+  const dropdown = document.getElementById('companiesDropdown');
+  const quickView = document.getElementById('companiesQuickView');
+  dropdown.addEventListener('change', (e) => {
+    if (e.target.value === '') {
+      quickView.style.display = 'none';
+    } else {
+      const company = state.searchResults[parseInt(e.target.value)];
+      quickView.innerHTML = `
+        <strong>${company.name}</strong><br>
+        📍 ${company.address}<br>
+        ${company.emails && company.emails.length > 0 ? `📧 ${company.emails.join(', ')}` : '📧 Pas d\'emails trouvés'}
+      `;
+      quickView.style.display = 'block';
+    }
+  });
+}
+
+function handleFileUpload(e) {
+  const files = Array.from(e.target.files);
+  const preview = document.getElementById('filesPreview');
+  preview.innerHTML = '';
+
+  const errors = [];
+  const validFiles = [];
+  const maxFileSize = 25 * 1024 * 1024; // 25MB
+  const allowedFormats = ['pdf', 'png', 'jpg', 'dwg', 'step', 'iges', 'zip'];
+
+  files.forEach((file, index) => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    let isValid = true;
+
+    if (!allowedFormats.includes(ext)) {
+      errors.push(`${file.name}: Format non autorisé`);
+      isValid = false;
+    } else if (file.size > maxFileSize) {
+      errors.push(`${file.name}: Fichier trop volumineux (max 25MB)`);
+      isValid = false;
+    } else if (validFiles.length >= 10) {
+      errors.push(`${file.name}: Maximum 10 fichiers dépassé`);
+      isValid = false;
+    } else {
+      validFiles.push(file);
     }
 
-    if (!company.emails || company.emails.length === 0) {
-      showAlert('❌ Aucun email disponible pour cette entreprise', 'error');
-      return;
+    // Show preview
+    const previewItem = document.createElement('div');
+    previewItem.className = `file-preview-item ${isValid ? '' : 'error'}`;
+    previewItem.innerHTML = `
+      <span>${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)</span>
+      <button type="button" class="file-preview-remove" data-index="${index}">✕</button>
+    `;
+
+    if (!isValid) {
+      previewItem.style.background = '#fee2e2';
     }
+
+    preview.appendChild(previewItem);
+  });
+
+  state.quoteDetails.files = validFiles;
+
+  // Remove button handlers
+  preview.querySelectorAll('.file-preview-remove').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const index = parseInt(btn.dataset.index);
+      state.quoteDetails.files.splice(index, 1);
+      handleFileUpload({ target: { files: state.quoteDetails.files } });
+    });
+  });
+
+  if (errors.length > 0) {
+    showError(errors.join('\n'));
+  }
+}
+
+function updateCompaniesDropdown() {
+  const dropdown = document.getElementById('companiesDropdown');
+
+  if (state.searchResults.length === 0) {
+    dropdown.innerHTML = '<option>-- Aucune entreprise trouvée --</option>';
+    return;
+  }
+
+  dropdown.innerHTML = '<option value="">-- Sélectionner une entreprise --</option>';
+
+  state.searchResults.forEach((company, index) => {
+    const option = document.createElement('option');
+    option.value = index;
+    option.textContent = company.name || 'N/A';
+    dropdown.appendChild(option);
+  });
+}
+
+// =============================================================================
+// STEP 3: EMAIL TEMPLATE
+// =============================================================================
+
+function setupEmailTemplate() {
+  const textarea = document.getElementById('emailTemplate');
+  textarea.addEventListener('change', (e) => {
+    state.emailTemplate = e.target.value;
+  });
+}
+
+function generateEmailTemplate() {
+  const { firstName, lastName, description } = state.quoteDetails;
+
+  const template = `Bonjour,
+
+Nous vous contactons afin de vous soumettre une demande de devis pour les services suivants:
+
+${description}
+
+Votre interlocuteur:
+${firstName} ${lastName}
+Email: ${state.quoteDetails.email}
+
+Pouvez-vous nous proposer un devis pour cette demande ?
+
+Cordialement,
+${firstName} ${lastName}`;
+
+  return template;
+}
+
+function updateEmailPreview() {
+  // Display attached files in step 3
+  const filesSection = document.getElementById('emailFilesSection');
+  const filesList = document.getElementById('emailFilesList');
+
+  if (state.quoteDetails.files && state.quoteDetails.files.length > 0) {
+    filesSection.style.display = 'block';
+    filesList.innerHTML = '';
+
+    state.quoteDetails.files.forEach((file) => {
+      const item = document.createElement('div');
+      item.innerHTML = `✓ ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+      filesList.appendChild(item);
+    });
+  } else {
+    filesSection.style.display = 'none';
+  }
+}
+
+// =============================================================================
+// STEP 4: COMPANIES SELECTION & SENDING
+// =============================================================================
+
+function setupCompaniesSelection() {
+  const selectAll = document.getElementById('selectAllCompanies');
+  const sendButton = document.getElementById('sendQuotes');
+
+  selectAll.addEventListener('change', (e) => {
+    const checkboxes = document.querySelectorAll('.company-checkbox-item input[type="checkbox"]');
+    checkboxes.forEach((cb) => {
+      cb.checked = e.target.checked;
+      const index = parseInt(cb.dataset.index);
+      if (e.target.checked) {
+        state.selectedCompanies.add(index);
+      } else {
+        state.selectedCompanies.delete(index);
+      }
+    });
+    updateSelectionSummary();
+  });
+
+  sendButton.addEventListener('click', handleSendQuotes);
+}
+
+function displayCompaniesCheckboxes() {
+  const list = document.getElementById('companiesList');
+  list.innerHTML = '';
+
+  state.searchResults.forEach((company, index) => {
+    const item = document.createElement('div');
+    item.className = 'company-checkbox-item';
+
+    const emails = company.emails && company.emails.length > 0 ? company.emails.join(', ') : 'Pas d\'email';
+
+    item.innerHTML = `
+      <input type="checkbox" data-index="${index}" class="company-select-checkbox">
+      <div class="company-checkbox-info">
+        <div class="company-checkbox-name">${company.name}</div>
+        <div class="company-checkbox-email">${emails}</div>
+      </div>
+    `;
+
+    const checkbox = item.querySelector('input[type="checkbox"]');
+    checkbox.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        state.selectedCompanies.add(index);
+      } else {
+        state.selectedCompanies.delete(index);
+      }
+      updateSelectionSummary();
+    });
+
+    list.appendChild(item);
+  });
+}
+
+function updateSelectionSummary() {
+  document.getElementById('selectedCount').textContent = state.selectedCompanies.size;
+  document.getElementById('totalCount').textContent = state.searchResults.length;
+}
+
+async function handleSendQuotes() {
+  if (state.selectedCompanies.size === 0) {
+    showError('Veuillez sélectionner au moins une entreprise');
+    return;
+  }
+
+  const selectedCompanies = Array.from(state.selectedCompanies).map((i) => state.searchResults[i]);
+  const progress = document.getElementById('sendingProgress');
+  const results = document.getElementById('sendingResults');
+
+  progress.style.display = 'block';
+  results.style.display = 'none';
+
+  const successResults = [];
+  const errorResults = [];
+
+  for (let i = 0; i < selectedCompanies.length; i++) {
+    const company = selectedCompanies[i];
 
     try {
-      // Sauvegarder le texte original du bouton
-      const originalText = btnElement.innerHTML;
-      btnElement.disabled = true;
-      btnElement.innerHTML = '⏳ Envoi en cours...';
+      // Debug logging
+      console.log(`📧 Sending email to company:`, company);
+      console.log(`📧 Company emails:`, company.emails);
 
-      // Récupérer les fichiers attachés s'il y en a
-      const attachments = await getAttachments();
+      const emailPayload = {
+        company: company,
+        clientInfo: {
+          name: `${state.quoteDetails.firstName} ${state.quoteDetails.lastName}`,
+          email: state.quoteDetails.email,
+          description: state.quoteDetails.description,
+        },
+        attachments: [],
+        useAlternateDomain: false,
+      };
+
+      console.log(`📧 Payload being sent:`, JSON.stringify(emailPayload, null, 2));
 
       const response = await fetch(`${API_URL}/api/email/send`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          company: company,
-          clientInfo: clientInfo,
-          attachments: attachments,
-          useAlternateDomain: false,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailPayload),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de l\'envoi');
-      }
-
-      const result = await response.json();
-      showAlert(`✅ Email envoyé avec succès à ${company.name}!`, 'success');
-      btnElement.innerHTML = '✅ Envoyé';
-      btnElement.disabled = true;
-    } catch (error) {
-      console.error('❌ Erreur:', error);
-      showAlert(`❌ Erreur: ${error.message}`, 'error');
-      btnElement.disabled = false;
-      btnElement.innerHTML = '📧 Envoyer un devis';
-    }
-  }
-
-  // Récupérer les fichiers attachés
-  async function getAttachments() {
-    const filesInput = document.getElementById('clientFiles');
-    const attachments = [];
-
-    if (!filesInput || filesInput.files.length === 0) {
-      return attachments;
-    }
-
-    // Limiter à 5 fichiers max et 25MB total
-    const maxFiles = 5;
-    const maxTotalSize = 25 * 1024 * 1024; // 25MB
-    let totalSize = 0;
-
-    for (let i = 0; i < Math.min(filesInput.files.length, maxFiles); i++) {
-      const file = filesInput.files[i];
-
-      if (file.size > 10 * 1024 * 1024) {
-        showAlert(`⚠️ Fichier "${file.name}" trop volumineux (>10MB)`, 'error');
-        continue;
-      }
-
-      totalSize += file.size;
-      if (totalSize > maxTotalSize) {
-        showAlert(`⚠️ Taille totale des fichiers dépasse 25MB`, 'error');
-        break;
-      }
-
-      // Convertir en base64
-      const base64 = await fileToBase64(file);
-
-      attachments.push({
-        filename: file.name,
-        base64: base64,
-        contentType: file.type,
-      });
-    }
-
-    return attachments;
-  }
-
-  // Convertir un fichier en base64
-  function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        // Extraire la partie base64 (après "data:...;base64,")
-        const base64String = reader.result.split(',')[1];
-        resolve(base64String);
-      };
-      reader.onerror = reject;
-    });
-  }
-
-  // Récupérer les infos du client ou demander
-  function getClientInfo() {
-    const modal = document.getElementById('clientInfoModal');
-    
-    // Essayer de charger depuis localStorage d'abord
-    const storedInfo = getStoredClientInfo();
-    if (storedInfo && storedInfo.name && storedInfo.email && storedInfo.company && storedInfo.service && storedInfo.description) {
-      return storedInfo;
-    }
-
-    // Sinon, afficher le formulaire
-    if (!modal) {
-      showClientInfoForm();
-      return null;
-    }
-
-    // Récupérer les infos du formulaire ouvert
-    const name = document.getElementById('clientName')?.value;
-    const email = document.getElementById('clientEmail')?.value;
-    const company = document.getElementById('clientCompany')?.value;
-    const service = document.getElementById('clientService')?.value;
-    const description = document.getElementById('clientDescription')?.value;
-    const budget = document.getElementById('clientBudget')?.value;
-    const timeline = document.getElementById('clientTimeline')?.value;
-
-    if (!name || !email || !company || !service || !description) {
-      return null;
-    }
-
-    return {
-      name,
-      email,
-      company,
-      service,
-      description,
-      budget,
-      timeline,
-    };
-  }
-
-  // Charger les infos client depuis localStorage
-  function getStoredClientInfo() {
-    const stored = localStorage.getItem('sourcebot_client_info');
-    return stored ? JSON.parse(stored) : null;
-  }
-
-  // Sauvegarder les infos client dans localStorage
-  function saveClientInfoToStorage(clientInfo) {
-    localStorage.setItem('sourcebot_client_info', JSON.stringify(clientInfo));
-  }
-
-  // Charger les infos au démarrage
-  function loadClientInfoFromStorage() {
-    const stored = getStoredClientInfo();
-    if (stored) {
-      console.log('✅ Infos client chargées depuis le stockage local');
-    }
-  }
-
-  // Ajouter un bouton pour modifier les infos client
-  function addClientInfoButton() {
-    const stored = getStoredClientInfo();
-    if (!stored) return;
-
-    const header = document.querySelector('header');
-    if (!header) return;
-
-    // Créer le bouton s'il n'existe pas déjà
-    if (document.getElementById('editClientInfoBtn')) return;
-
-    const btn = document.createElement('button');
-    btn.id = 'editClientInfoBtn';
-    btn.innerHTML = '✏️ Modifier mes infos';
-    btn.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 10px 15px;
-      background-color: #3b82f6;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 14px;
-      z-index: 999;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    `;
-    
-    btn.addEventListener('click', () => {
-      // Supprimer les modals existants
-      const existingModal = document.getElementById('clientInfoModal');
-      if (existingModal) {
-        existingModal.remove();
-      }
-      showClientInfoForm(true);
-    });
-
-    document.body.appendChild(btn);
-  }
-
-  // Afficher une bannière pour le mode test
-  function showTestModeBanner() {
-    const banner = document.createElement('div');
-    banner.id = 'testModeBanner';
-    banner.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(90deg, #fef3c7 0%, #fcd34d 100%);
-      border-bottom: 3px solid #f59e0b;
-      padding: 15px;
-      text-align: center;
-      font-weight: bold;
-      font-size: 14px;
-      color: #78350f;
-      z-index: 2000;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    `;
-    banner.innerHTML = `🧪 MODE TEST ACTIVÉ - Les emails seront envoyés à fourchettetest@gmail.com au lieu des entreprises`;
-    document.body.insertBefore(banner, document.body.firstChild);
-    
-    // Ajouter du padding au body pour éviter la superposition
-    document.body.style.paddingTop = '50px';
-  }
-
-  // Afficher le formulaire des infos client
-  function showClientInfoForm(isEditing = false) {
-    const existingModal = document.getElementById('clientInfoModal');
-    if (existingModal && !isEditing) return;
-
-    const storedInfo = getStoredClientInfo();
-
-    const modalHtml = `
-      <div id="clientInfoModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; overflow-y: auto; padding: 20px 0;">
-        <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.2); margin: auto;">
-          <h2>📋 ${isEditing ? 'Modifier vos informations' : 'Vos Informations de Contact'}</h2>
-          <p style="color: #666; margin-bottom: 20px;">Remplissez ces infos une fois, elles seront réutilisées pour tous les envois</p>
-          
-          <form id="clientInfoForm">
-            <div style="margin-bottom: 15px;">
-              <label style="display: block; font-weight: bold; margin-bottom: 5px;">👤 Votre nom *</label>
-              <input type="text" id="clientName" placeholder="ex: Jean Dupont" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;" value="${storedInfo?.name || ''}" required>
-            </div>
-            
-            <div style="margin-bottom: 15px;">
-              <label style="display: block; font-weight: bold; margin-bottom: 5px;">✉️ Votre email *</label>
-              <input type="email" id="clientEmail" placeholder="ex: jean@exemple.com" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;" value="${storedInfo?.email || ''}" required>
-            </div>
-            
-            <div style="margin-bottom: 15px;">
-              <label style="display: block; font-weight: bold; margin-bottom: 5px;">🏢 Votre entreprise *</label>
-              <input type="text" id="clientCompany" placeholder="ex: Acme Corp" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;" value="${storedInfo?.company || ''}" required>
-            </div>
-            
-            <div style="margin-bottom: 15px;">
-              <label style="display: block; font-weight: bold; margin-bottom: 5px;">🔧 Service demandé *</label>
-              <input type="text" id="clientService" placeholder="ex: Menuiserie, Plomberie" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;" value="${storedInfo?.service || ''}" required>
-            </div>
-            
-            <div style="margin-bottom: 15px;">
-              <label style="display: block; font-weight: bold; margin-bottom: 5px;">📝 Description du besoin *</label>
-              <textarea id="clientDescription" placeholder="Décrivez précisément votre besoin..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; height: 100px; resize: vertical; box-sizing: border-box;" required>${storedInfo?.description || ''}</textarea>
-            </div>
-            
-            <div style="margin-bottom: 15px;">
-              <label style="display: block; font-weight: bold; margin-bottom: 5px;">💰 Budget (optionnel)</label>
-              <input type="text" id="clientBudget" placeholder="ex: 5000€ - 10000€" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;" value="${storedInfo?.budget || ''}">
-            </div>
-            
-            <div style="margin-bottom: 20px;">
-              <label style="display: block; font-weight: bold; margin-bottom: 5px;">⏰ Timeline (optionnel)</label>
-              <input type="text" id="clientTimeline" placeholder="ex: Urgent, ASAP" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;" value="${storedInfo?.timeline || ''}">
-            </div>
-
-            <div style="margin-bottom: 20px;">
-              <label style="display: block; font-weight: bold; margin-bottom: 5px;">📎 Fichiers à joindre (optionnel)</label>
-              <input type="file" id="clientFiles" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png,.zip" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;">
-              <small style="color: #666; display: block; margin-top: 5px;">Max 5 fichiers, 10MB par fichier, 25MB total. Formats: PDF, DOC, XLS, Images, ZIP</small>
-            </div>
-            
-            <div style="display: flex; gap: 10px;">
-              <button type="submit" class="btn-primary" style="flex: 1; padding: 10px; background-color: #10b981; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
-                ✅ ${isEditing ? 'Mettre à jour' : 'Enregistrer mes infos'}
-              </button>
-              <button type="button" id="closeModal" style="flex: 1; padding: 10px; background-color: #6b7280; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
-                ❌ Fermer
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    `;
-
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-    document.getElementById('clientInfoForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      
-      // Récupérer les données du formulaire
-      const clientInfo = {
-        name: document.getElementById('clientName').value,
-        email: document.getElementById('clientEmail').value,
-        company: document.getElementById('clientCompany').value,
-        service: document.getElementById('clientService').value,
-        description: document.getElementById('clientDescription').value,
-        budget: document.getElementById('clientBudget').value,
-        timeline: document.getElementById('clientTimeline').value,
-      };
-
-      // Sauvegarder dans localStorage
-      saveClientInfoToStorage(clientInfo);
-
-      const modal = document.getElementById('clientInfoModal');
-      modal.style.display = 'none';
-      modal.remove();
-      
-      // Afficher les fichiers sélectionnés si disponibles
-      const filesInput = document.getElementById('clientFiles');
-      if (filesInput && filesInput.files.length > 0) {
-        const fileNames = Array.from(filesInput.files).map(f => f.name).join(', ');
-        showAlert(`✅ Infos enregistrées! ${filesInput.files.length} fichier(s) attaché(s): ${fileNames}`, 'success');
+      if (response.ok) {
+        successResults.push(company.name);
       } else {
-        showAlert(`✅ ${isEditing ? 'Infos mises à jour!' : 'Vos informations ont été enregistrées!'}`, 'success');
+        const errorData = await response.json().catch(() => ({ error: 'Erreur API' }));
+        errorResults.push(`${company.name}: ${errorData.error || 'Erreur inconnue'}`);
       }
+    } catch (error) {
+      errorResults.push(`${company.name}: ${error.message}`);
+    }
 
-      // Ajouter le bouton de modification si ce n'était pas déjà fait
-      if (!document.getElementById('editClientInfoBtn')) {
-        addClientInfoButton();
-      }
+    // Update progress
+    const percent = Math.round(((i + 1) / selectedCompanies.length) * 100);
+    document.getElementById('progressFill').style.width = `${percent}%`;
+    document.getElementById('progressText').textContent = `Envoi en cours... ${percent}%`;
+  }
+
+  progress.style.display = 'none';
+  displaySendingResults(successResults, errorResults);
+}
+
+function displaySendingResults(successResults, errorResults) {
+  const results = document.getElementById('sendingResults');
+  const detail = document.getElementById('resultsDetail');
+
+  detail.innerHTML = '';
+
+  // Success message
+  const summary = document.createElement('div');
+  summary.style.cssText = 'background: #dcfce7; border: 1px solid #86efac; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;';
+  summary.innerHTML = `
+    <h3 style="color: #16a34a; margin-top: 0;">✅ Envoi réussi!</h3>
+    <p style="color: #15803d; margin-bottom: 0.5rem;">
+      <strong>${successResults.length}</strong> email(s) ont été traité(s) avec succès.
+    </p>
+    <p style="color: #15803d; font-size: 0.9rem;">
+      🧪 <strong>MODE TEST:</strong> Tous les emails ont été envoyés à <strong>fourchettetest@gmail.com</strong>
+    </p>
+  `;
+  detail.appendChild(summary);
+
+  // List each sent email
+  const listDiv = document.createElement('div');
+  listDiv.innerHTML = '<h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">📧 Emails traités:</h4>';
+
+  successResults.forEach((name, index) => {
+    const item = document.createElement('div');
+    item.className = 'result-item success';
+    item.style.display = 'flex';
+    item.style.justifyContent = 'space-between';
+    item.style.alignItems = 'center';
+    item.innerHTML = `
+      <span>
+        <strong>${index + 1}.</strong> ${name}
+      </span>
+      <span style="background: #10b981; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">
+        ✓ Envoyé
+      </span>
+    `;
+    listDiv.appendChild(item);
+  });
+
+  if (errorResults.length > 0) {
+    const errorDiv = document.createElement('div');
+    errorDiv.innerHTML = '<h4 style="margin-top: 1rem; margin-bottom: 1rem; color: #991b1b;">❌ Erreurs:</h4>';
+    
+    errorResults.forEach((error) => {
+      const item = document.createElement('div');
+      item.className = 'result-item error';
+      item.innerHTML = `<span>✗ ${error}</span>`;
+      errorDiv.appendChild(item);
     });
-
-    document.getElementById('closeModal').addEventListener('click', () => {
-      const modal = document.getElementById('clientInfoModal');
-      modal.remove();
-    });
+    
+    listDiv.appendChild(errorDiv);
   }
 
-  // Fonctions utilitaires
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
+  detail.appendChild(listDiv);
 
-  function showAlert(message, type = 'info') {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type}`;
-    alertDiv.textContent = message;
+  // Info box
+  const infoDiv = document.createElement('div');
+  infoDiv.style.cssText = 'background: #eef2ff; border: 1px solid #bfdbfe; padding: 1rem; border-radius: 6px; margin-top: 1rem;';
+  infoDiv.innerHTML = `
+    <p style="color: #1e40af; margin: 0; font-size: 0.9rem;">
+      📌 <strong>En mode développement:</strong> Les emails sont simulés et enregistrés dans le système de test.
+      Vérifiez <strong>fourchettetest@gmail.com</strong> pour voir les emails reçus.
+    </p>
+  `;
+  detail.appendChild(infoDiv);
 
-    const container = document.querySelector('main');
-    container.insertBefore(alertDiv, container.firstChild);
+  results.style.display = 'block';
+}
 
-    setTimeout(() => {
-      alertDiv.remove();
-    }, 5000);
-  }
+// =============================================================================
+// STEP NAVIGATION
+// =============================================================================
 
-  console.log('✅ SourceBot Frontend initialized');
-});
+function setupStepNavigation() {
+  // Step 1 -> Step 2
+  document.getElementById('continueToStep2').addEventListener('click', () => {
+    if (state.searchResults.length === 0) {
+      showError('Veuillez faire une recherche d\'abord');
+      return;
+    }
+    updateCompaniesDropdown();
+    goToStep(2);
+  });
+
+  // Step 2 -> Step 3
+  document.getElementById('continueToStep3').addEventListener('click', () => {
+    const form = document.getElementById('quoteDetailsForm');
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    // Save form data
+    state.quoteDetails.firstName = document.getElementById('clientFirstName').value;
+    state.quoteDetails.lastName = document.getElementById('clientLastName').value;
+    state.quoteDetails.email = document.getElementById('clientEmail').value;
+    state.quoteDetails.description = document.getElementById('projectDescription').value;
+
+    // Generate email template
+    state.emailTemplate = generateEmailTemplate();
+    document.getElementById('emailTemplate').value = state.emailTemplate;
+
+    // Show attached files
+    updateEmailPreview();
+
+    goToStep(3);
+  });
+
+  // Step 3 -> Step 4
+  document.getElementById('continueToStep4').addEventListener('click', () => {
+    // Save email template
+    state.emailTemplate = document.getElementById('emailTemplate').value;
+
+    // Display companies for selection
+    displayCompaniesCheckboxes();
+    updateSelectionSummary();
+
+    goToStep(4);
+  });
+
+  // Back buttons
+  document.getElementById('backToStep1').addEventListener('click', () => goToStep(1));
+  document.getElementById('backToStep2').addEventListener('click', () => goToStep(2));
+  document.getElementById('backToStep3').addEventListener('click', () => goToStep(3));
+}
+
+function goToStep(stepNumber) {
+  // Hide all steps
+  document.querySelectorAll('.step-section').forEach((section) => {
+    section.classList.remove('active');
+  });
+
+  // Hide all step indicators
+  document.querySelectorAll('.step').forEach((step) => {
+    step.classList.remove('active');
+  });
+
+  // Show current step
+  const stepSection = document.getElementById(`step${stepNumber}-section`);
+  const stepIndicator = document.getElementById(`step${stepNumber}-indicator`);
+
+  if (stepSection) stepSection.classList.add('active');
+  if (stepIndicator) stepIndicator.classList.add('active');
+
+  state.currentStep = stepNumber;
+
+  // Scroll to top
+  window.scrollTo(0, 0);
+}
+
+// =============================================================================
+// UTILITIES
+// =============================================================================
+
+function showError(message) {
+  const error = document.getElementById('error');
+  error.textContent = message;
+  error.style.display = 'block';
+  setTimeout(() => {
+    error.style.display = 'none';
+  }, 5000);
+}
+
+function showTestModeBanner() {
+  const banner = document.createElement('div');
+  banner.style.cssText =
+    'background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;';
+  banner.innerHTML = `🧪 <strong>MODE TEST ACTIVÉ</strong> - Les emails seront envoyés à: <strong>${state.testEmail}</strong>`;
+
+  document.querySelector('main').insertBefore(banner, document.querySelector('main').firstChild);
+}
