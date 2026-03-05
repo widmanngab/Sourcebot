@@ -90,9 +90,14 @@ app.use('/api', scrapingRoutes);
 // Use email routes
 app.use('/api', emailRoutes);
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route non trouvée' });
+// SPA - Serve index.html for all non-API routes
+app.get('*', (req, res) => {
+  // Si ce n'est pas une route API, servir index.html (pour la SPA)
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+  } else {
+    res.status(404).json({ error: 'Route non trouvée' });
+  }
 });
 
 // Error handler

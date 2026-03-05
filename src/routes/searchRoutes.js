@@ -20,6 +20,21 @@ router.get('/config', (req, res) => {
 });
 
 /**
+ * GET /api/diagnostic
+ * Check API configuration and credentials
+ */
+router.get('/diagnostic', (req, res) => {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  return res.json({
+    status: 'ok',
+    googlePlacesApiConfigured: !!apiKey,
+    googlePlacesApiKeyPreview: apiKey ? `${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 5)}` : 'NOT SET',
+    environment: process.env.NODE_ENV || 'development',
+    nodeVersion: process.version,
+  });
+});
+
+/**
  * POST /api/search
  * Search for companies
  * Body: { keyword, location, radius }

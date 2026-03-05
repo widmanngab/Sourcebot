@@ -17,17 +17,44 @@ class EmailController {
     try {
       const { company, clientInfo, attachments = [], useAlternateDomain = false } = req.body;
 
+      // Debug logging
+      logger.info(`📨 Email send request received:`, {
+        hasCompany: !!company,
+        companyName: company?.name,
+        companyEmails: company?.emails,
+        hasClientInfo: !!clientInfo,
+        clientEmail: clientInfo?.email,
+      });
+
       if (!company || !company.emails || company.emails.length === 0) {
+        logger.error(`❌ Validation failed:`, {
+          company: !!company,
+          emails: company?.emails,
+          emailsLength: company?.emails?.length,
+        });
         return res.status(400).json({
           error: 'Company with email is required',
           status: 'error',
+          details: {
+            company: !!company,
+            emails: company?.emails,
+            emailsLength: company?.emails?.length,
+          },
         });
       }
 
       if (!clientInfo || !clientInfo.email) {
+        logger.error(`❌ Client info validation failed`, {
+          hasClientInfo: !!clientInfo,
+          clientEmail: clientInfo?.email,
+        });
         return res.status(400).json({
           error: 'Client info with email is required',
           status: 'error',
+          details: {
+            hasClientInfo: !!clientInfo,
+            clientEmail: clientInfo?.email,
+          },
         });
       }
 
