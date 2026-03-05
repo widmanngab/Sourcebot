@@ -1,4 +1,8 @@
 // SourceBot Client - Application Frontend
+
+// Configuration API - Pointer vers le backend Railway
+const API_URL = 'https://sourcebot-production.up.railway.app';
+
 document.addEventListener('DOMContentLoaded', async () => {
   const searchForm = document.getElementById('searchForm');
   const resultsContainer = document.getElementById('resultsContainer');
@@ -11,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Charger la configuration (mode test, etc)
   try {
-    const configResponse = await fetch('/api/config');
+    const configResponse = await fetch(`${API_URL}/api/config`);
     const config = await configResponse.json();
     testMode = config.testMode;
     testEmail = config.testEmail;
@@ -59,7 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       submitBtn.innerHTML = '<span class="spinner"></span> Recherche en cours...';
 
       // Appeler l'API backend
-      const response = await fetch('/api/search', {
+      const response = await fetch(`${API_URL}/api/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -187,7 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Récupérer les fichiers attachés s'il y en a
       const attachments = await getAttachments();
 
-      const response = await fetch('/api/email/send', {
+      const response = await fetch(`${API_URL}/api/email/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
