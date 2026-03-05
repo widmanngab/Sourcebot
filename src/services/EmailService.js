@@ -1,37 +1,130 @@
 import nodemailer from 'nodemailer';
+import axios from 'axios';
 import logger from '../utils/logger.js';
+import MockEmailService from './MockEmailService.js';
 
 class EmailService {
   constructor() {
+    // Check if mock mode is enabled
+    this.mockMode = process.env.MOCK_EMAIL_MODE === 'true';
+    if (this.mockMode) {
+      logger.info('🎭 MOCK EMAIL MODE ENABLED - Emails will be simulated');
+    }
+
     // Mailjet SMTP Configuration
     this.apiKey = process.env.MAILJET_API_KEY;
     this.apiSecret = process.env.MAILJET_API_SECRET;
     this.fromEmail = process.env.MAILJET_FROM_EMAIL || `${this.apiKey}@incoming.mailjet.com`;
     this.fromName = 'SourceBot - Demande de Devis';
 
-    if (!this.apiKey || !this.apiSecret) {
-      logger.error('❌ Mailjet credentials missing (MAILJET_API_KEY, MAILJET_API_SECRET)');
-    }
+    // Mailjet API Base URL
+    this.mailjetApiUrl = 'https://api.mailjet.com/v3.1/send';
+    this.mailjetAuth = Buffer.from(`${this.apiKey}:${this.apiSecret}`).toString('base64');
 
-    // Configure Nodemailer with Mailjet SMTP
-    this.transporter = nodemailer.createTransport({
-      host: 'in-v3.mailjet.com',
-      port: 587,
-      secure: false, // TLS
-      auth: {
-        user: this.apiKey,
-        pass: this.apiSecret,
-      },
-    });
-
-    // Verify connection
-    this.transporter.verify((error) => {
-      if (error) {
-        logger.error('❌ Mailjet connection failed:', error);
-      } else {
-        logger.info('✅ Mailjet SMTP connection ready');
+    if (!this.mockMode) {
+      if (!this.apiKey || !this.apiSecret) {
+        logger.error('❌ Mailjet credentials missing (MAILJET_API_KEY, MAILJET_API_SECRET)');
       }
-    });
+
+      // Configure Nodemailer with Mailjet SMTP
+      this.transporter = nodemailer.createTransport({
+        host: 'in-v3.mailjet.com',
+        port: 587,
+        secure: false, // TLS
+        auth: {
+          user: this.apiKey,
+          pass: this.apiSecret,
+        },
+      });
+
+      // Verify connection
+      this.transporter.verify((error) => {
+        if (error) {
+          logger.error('❌ Mailjet connection failed:', error);
+        } else {
+          logger.info('✅ Mailjet SMTP connection ready');
+        }
+      });
+    }
+  }
+
+  /**
+   * Send email via Mailjet API (with variations support and attachments)
+   */
+  async sendViaMailjet(mailData) {
+    try {
+      // Use mock service if enabled
+      if (this.mockMode) {
+        return await MockEmailService.sendViaMailjet(mailData);
+      }
+
+      // Build attachments array for Mailjet API
+      const attachments = [];
+      if (mailData.attachments && Array.isArray(mailData.attachments)) {
+        for (const attachment of mailData.attachments) {
+          attachments.push({
+            Filename: attachment.filename,
+            Base64Content: attachment.base64,
+            ContentType: attachment.contentType || 'application/octet-stream',
+          });
+        }
+      }
+
+      const payload = {
+        Messages: [
+          {
+            From: {
+              Email: mailData.from.email,
+              Name: mailData.from.name || 'SourceBot',
+            },
+            To: mailData.to.map(recipient => ({
+              Email: recipient.email,
+              Name: recipient.name || '',
+            })),
+            ReplyTo: mailData.replyTo ? {
+              Email: mailData.replyTo.email,
+              Name: mailData.replyTo.name || '',
+            } : undefined,
+            Subject: mailData.subject,
+            TextPart: mailData.textPart,
+            HTMLPart: mailData.htmlPart,
+            CustomID: mailData.customId || `sourcebot-${Date.now()}`,
+            // Attachments
+            ...(attachments.length > 0 && { Attachments: attachments }),
+            // Headers to avoid spam filters
+            Headers: {
+              'X-Priority': '3',
+              'X-SourceBot': 'v1.0',
+              'X-Campaign': 'quote-request',
+            },
+            // Track opens and clicks for analytics
+            TrackOpens: 'true',
+            TrackClicks: 'true',
+          },
+        ],
+      };
+
+      const response = await axios.post(this.mailjetApiUrl, payload, {
+        headers: {
+          Authorization: `Basic ${this.mailjetAuth}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      logger.info(`✅ Email sent via Mailjet API`, {
+        to: mailData.to[0].email,
+        messageId: response.data.Messages[0].ID,
+        attachments: attachments.length,
+      });
+
+      return response.data.Messages[0];
+    } catch (error) {
+      logger.error('❌ Mailjet API error:', {
+        status: error.response?.status,
+        message: error.response?.data?.ErrorMessage || error.message,
+      });
+      throw new Error(error.response?.data?.ErrorMessage || error.message);
+    }
   }
 
   /**

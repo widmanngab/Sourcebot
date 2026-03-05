@@ -139,23 +139,65 @@ class GooglePlacesService {
     try {
       logger.info(`🚀 Starting comprehensive search: ${keyword} in ${location}`);
       
-      const companies = new Map();
-      
       // Step 1: Text search for national results
       const textResults = await this.textSearch(keyword, location);
       logger.info(`📍 Text search returned ${textResults.length} results`);
       
-      for (const result of textResults) {
-        const details = await this.getPlaceDetails(result.place_id);
-        if (details) {
-          companies.set(result.place_id, details);
+      // Limit to first 10 results for performance
+      const limitedResults = textResults.slice(0, 10);
+      
+      // Step 2: Get details (especially website) for each company - parallel requests with delay
+      logger.info(`🌐 Fetching website details for ${limitedResults.length} companies...`);
+      
+      const companies = [];
+      const batchSize = 3; // Parallel requests per batch
+      
+      for (let i = 0; i < limitedResults.length; i += batchSize) {
+        const batch = limitedResults.slice(i, i + batchSize);
+        
+        const batchPromises = batch.map(async (result) => {
+          try {
+            const details = await this.getPlaceDetails(result.place_id);
+            return {
+              placeId: result.place_id,
+              name: details?.name || result.name || 'N/A',
+              address: details?.address || result.formatted_address || 'N/A',
+              phone: details?.phone || '',
+              website: details?.website || '', // This is the key field we need
+              rating: details?.rating || result.rating || null,
+              reviewCount: details?.reviewCount || result.user_ratings_total || 0,
+              lat: details?.lat || result.geometry?.location?.lat || null,
+              lng: details?.lng || result.geometry?.location?.lng || null,
+              businessStatus: details?.businessStatus || 'UNKNOWN',
+            };
+          } catch (error) {
+            logger.warn(`⚠️ Failed to get details for ${result.name}:`, error.message);
+            return {
+              placeId: result.place_id,
+              name: result.name || 'N/A',
+              address: result.formatted_address || 'N/A',
+              phone: '',
+              website: '',
+              rating: result.rating || null,
+              reviewCount: result.user_ratings_total || 0,
+              lat: result.geometry?.location?.lat || null,
+              lng: result.geometry?.location?.lng || null,
+              businessStatus: 'UNKNOWN',
+            };
+          }
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        companies.push(...batchResults);
+        
+        // Add delay between batches to avoid rate limiting
+        if (i + batchSize < limitedResults.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
-        // Rate limiting: 100ms between requests
-        await new Promise(resolve => setTimeout(resolve, 100));
       }
       
-      logger.info(`✅ Comprehensive search completed: ${companies.size} unique companies`);
-      return Array.from(companies.values());
+      logger.info(`✅ Comprehensive search completed: ${companies.length} companies with websites`);
+      return companies;
     } catch (error) {
       logger.error('❌ Comprehensive search failed', { 
         keyword, 

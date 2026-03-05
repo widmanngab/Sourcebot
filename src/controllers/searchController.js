@@ -1,9 +1,11 @@
 import GooglePlacesService from '../services/GooglePlacesService.js';
+import ScrapingService from '../services/ScrapingService.js';
 import logger from '../utils/logger.js';
 
 class SearchController {
   constructor() {
     this.placesService = new GooglePlacesService(process.env.GOOGLE_PLACES_API_KEY);
+    this.scrapingService = new ScrapingService();
   }
 
   /**
@@ -33,14 +35,50 @@ class SearchController {
         radius
       );
 
+      logger.info(`📧 Starting email scraping for ${results.length} companies...`);
+
+      // Scrape emails for each company
+      const enrichedResults = await Promise.all(
+        results.map(async (company) => {
+          if (company.website) {
+            logger.info(`🕷️ Scraping website for ${company.name}: ${company.website}`);
+            try {
+              const emails = await this.scrapingService.scrapeEmail(company.website);
+              logger.info(`✅ Found ${emails.length} emails for ${company.name}`);
+              return {
+                ...company,
+                emails: emails,
+                emailCount: emails.length,
+              };
+            } catch (error) {
+              logger.warn(`⚠️ Failed to scrape emails for ${company.website}:`, error.message);
+              return {
+                ...company,
+                emails: [],
+                emailCount: 0,
+              };
+            }
+          } else {
+            logger.warn(`⚠️ No website for ${company.name}`);
+            return {
+              ...company,
+              emails: [],
+              emailCount: 0,
+            };
+          }
+        })
+      );
+
+      logger.info(`✅ Email scraping complete`);
+
       // Return results
       return res.status(200).json({
         status: 'success',
         keyword,
         location,
         radius,
-        count: results.length,
-        results: results,
+        count: enrichedResults.length,
+        results: enrichedResults,
       });
     } catch (error) {
       logger.error('❌ Search controller error', { 

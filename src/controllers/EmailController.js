@@ -1,54 +1,134 @@
 import EmailService from '../services/EmailService.js';
+import EmailVariationService from '../services/EmailVariationService.js';
 import logger from '../utils/logger.js';
 
 class EmailController {
   constructor() {
     this.emailService = new EmailService();
+    this.variationService = new EmailVariationService();
   }
 
   /**
-   * Send quote request email to a company
-   * POST /api/send-quote
-   * Body: { company, userEmail, subject, message, keyword, description, budget, deadline }
+   * Send quote request email to a company with variation
+   * POST /api/email/send
+   * Body: { company, clientInfo, attachments, useAlternateDomain }
    */
   async sendQuote(req, res) {
     try {
-      const { company, userEmail, keyword, description, budget, deadline } = req.body;
+      const { company, clientInfo, attachments = [], useAlternateDomain = false } = req.body;
 
-      if (!company) {
+      if (!company || !company.emails || company.emails.length === 0) {
         return res.status(400).json({
-          error: 'Company data is required',
+          error: 'Company with email is required',
           status: 'error',
         });
       }
 
-      logger.info(`📧 Sending quote request to: ${company.company}`);
-
-      const result = await this.emailService.sendQuoteRequest(company, {
-        userEmail: userEmail || 'contact@sourcebot.fr',
-        keyword: keyword || 'Projet',
-        description: description || '',
-        budget: budget || 'À définir',
-        deadline: deadline || 'À définir',
-      });
-
-      if (result.success) {
-        return res.status(200).json({
-          status: 'success',
-          message: `Email sent successfully to ${result.email}`,
-          result,
+      if (!clientInfo || !clientInfo.email) {
+        return res.status(400).json({
+          error: 'Client info with email is required',
+          status: 'error',
         });
       }
 
-      return res.status(400).json({
-        status: 'error',
-        message: result.error,
-        result,
-      });
+      // Vérifier le mode test
+      const testMode = process.env.TEST_MODE === 'true';
+      const testEmail = process.env.TEST_EMAIL || 'fourchettetest@gmail.com';
+
+      logger.info(`📧 Sending quote request to: ${company.name}`);
+      if (testMode) {
+        logger.info(`🧪 TEST MODE ENABLED - Email will be sent to: ${testEmail}`);
+      }
+
+      // Generate email variation
+      const emailContent = this.variationService.generateEmailVariation(company, clientInfo);
+      const senderInfo = this.variationService.getSenderEmail(useAlternateDomain);
+
+      // Déterminer l'email destinataire
+      let targetEmail = company.emails[0];
+      let isTestMode = false;
+      
+      if (testMode) {
+        // En mode test, envoyer à l'adresse test
+        targetEmail = testEmail;
+        isTestMode = true;
+        
+        // Modifier le sujet pour indiquer que c'est un test
+        emailContent.subject = `[🧪 TEST] ${emailContent.subject}`;
+        emailContent.text = `[CECI EST UN EMAIL DE TEST - MODE DÉVELOPPEMENT]\nEntreprise ciblée: ${company.name} (${company.emails[0]})\n\n${emailContent.text}`;
+        emailContent.html = `<div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-bottom: 20px;"><strong>🧪 CECI EST UN EMAIL DE TEST - MODE DÉVELOPPEMENT</strong><br/>Entreprise ciblée: ${company.name} (${company.emails[0]})</div>${emailContent.html}`;
+      }
+      
+      try {
+        // Send via Mailjet
+        const response = await this.emailService.sendViaMailjet({
+          from: senderInfo,
+          to: [{
+            email: targetEmail,
+            name: isTestMode ? 'TEST INBOX' : company.name,
+          }],
+          replyTo: {
+            email: clientInfo.email,
+            name: clientInfo.name || 'Demandeur',
+          },
+          subject: emailContent.subject,
+          textPart: emailContent.text,
+          htmlPart: emailContent.html,
+          attachments: attachments,
+          customId: `quote-request-${company.placeId}-${Date.now()}`,
+        });
+
+        logger.info(`✅ Email sent to ${targetEmail}${isTestMode ? ' (TEST MODE)' : ''} for ${company.name}`);
+
+        return res.status(200).json({
+          status: 'success',
+          message: `${isTestMode ? '🧪 [TEST MODE] ' : ''}Email envoyé à ${company.name}`,
+          email: targetEmail,
+          testMode: isTestMode,
+          originalEmail: isTestMode ? company.emails[0] : null,
+          messageId: response.MessageID,
+        });
+      } catch (error) {
+        logger.error(`❌ Failed to send email to ${targetEmail}:`, error.message);
+        
+        // Try other emails if available (only in non-test mode)
+        if (!testMode && company.emails.length > 1) {
+          logger.info(`🔄 Trying alternative email...`);
+          const altEmail = company.emails[1];
+          
+          const response = await this.emailService.sendViaMailjet({
+            from: senderInfo,
+            to: [{
+              email: altEmail,
+              name: company.name,
+            }],
+            replyTo: {
+              email: clientInfo.email,
+              name: clientInfo.name || 'Demandeur',
+            },
+            subject: emailContent.subject,
+            textPart: emailContent.text,
+            htmlPart: emailContent.html,
+            attachments: attachments,
+            customId: `quote-request-${company.placeId}-${Date.now()}`,
+          });
+
+          logger.info(`✅ Email sent to ${altEmail} (alternative)`);
+          
+          return res.status(200).json({
+            status: 'success',
+            message: `Email envoyé à ${company.name} (adresse alternative)`,
+            email: altEmail,
+            messageId: response.MessageID,
+          });
+        }
+
+        throw error;
+      }
     } catch (error) {
       logger.error('❌ Error in sendQuote:', error);
       return res.status(500).json({
-        error: 'Failed to send email',
+        error: 'Erreur lors de l\'envoi de l\'email',
         status: 'error',
         message: error.message,
       });
@@ -56,13 +136,13 @@ class EmailController {
   }
 
   /**
-   * Send batch quote requests to multiple companies
-   * POST /api/send-batch
-   * Body: { companies, userEmail, keyword, description, budget, deadline }
+   * Send batch quote requests to multiple companies with variations
+   * POST /api/email/send-batch
+   * Body: { companies, clientInfo, useAlternateDomain }
    */
   async sendBatch(req, res) {
     try {
-      const { companies, userEmail, keyword, description, budget, deadline } = req.body;
+      const { companies, clientInfo, useAlternateDomain = false } = req.body;
 
       if (!companies || !Array.isArray(companies) || companies.length === 0) {
         return res.status(400).json({
@@ -71,27 +151,81 @@ class EmailController {
         });
       }
 
-      logger.info(
-        `📧 Sending batch quote requests to ${companies.length} companies`
-      );
+      if (!clientInfo || !clientInfo.email) {
+        return res.status(400).json({
+          error: 'Client info with email is required',
+          status: 'error',
+        });
+      }
 
-      const results = await this.emailService.sendBatch(companies, {
-        userEmail: userEmail || 'contact@sourcebot.fr',
-        keyword: keyword || 'Projet',
-        description: description || '',
-        budget: budget || 'À définir',
-        deadline: deadline || 'À définir',
-      });
+      logger.info(`📧 Sending batch quote requests to ${companies.length} companies`);
+
+      const results = {
+        sent: [],
+        failed: [],
+      };
+
+      const senderInfo = this.variationService.getSenderEmail(useAlternateDomain);
+
+      // Send emails sequentially to avoid rate limiting
+      for (const company of companies) {
+        try {
+          if (!company.emails || company.emails.length === 0) {
+            results.failed.push({
+              company: company.name,
+              reason: 'No email found',
+            });
+            continue;
+          }
+
+          // Generate variation for each company
+          const emailContent = this.variationService.generateEmailVariation(company, clientInfo);
+          const targetEmail = company.emails[0];
+
+          const response = await this.emailService.sendViaMailjet({
+            from: senderInfo,
+            to: [{
+              email: targetEmail,
+              name: company.name,
+            }],
+            replyTo: {
+              email: clientInfo.email,
+              name: clientInfo.name || 'Demandeur',
+            },
+            subject: emailContent.subject,
+            textPart: emailContent.text,
+            htmlPart: emailContent.html,
+            customId: `batch-${company.placeId}-${Date.now()}`,
+          });
+
+          results.sent.push({
+            company: company.name,
+            email: targetEmail,
+            messageId: response.MessageID,
+          });
+
+          logger.info(`✅ Email sent to ${company.name}`);
+
+          // Add delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+          logger.warn(`⚠️ Failed to send email to ${company.name}:`, error.message);
+          results.failed.push({
+            company: company.name,
+            reason: error.message,
+          });
+        }
+      }
 
       return res.status(200).json({
         status: 'success',
-        message: `Batch send completed: ${results.sent.length} sent, ${results.failed.length} failed`,
+        message: `Emails envoyés: ${results.sent.length}/${companies.length}`,
         results,
       });
     } catch (error) {
       logger.error('❌ Error in sendBatch:', error);
       return res.status(500).json({
-        error: 'Failed to send batch',
+        error: 'Erreur lors de l\'envoi du batch',
         status: 'error',
         message: error.message,
       });
@@ -99,24 +233,24 @@ class EmailController {
   }
 
   /**
-   * Send quote requests to all companies from search results
-   * POST /api/send-to-search-results
-   * Body: { searchResults, userEmail, keyword, description, budget, deadline }
+   * Send quote requests to all companies from search results with email addresses
+   * POST /api/email/send-to-search-results
+   * Body: { searchResults, clientInfo, useAlternateDomain }
    */
   async sendToSearchResults(req, res) {
     try {
-      const {
-        searchResults,
-        userEmail,
-        keyword,
-        description,
-        budget,
-        deadline,
-      } = req.body;
+      const { searchResults, clientInfo, useAlternateDomain = false } = req.body;
 
-      if (!searchResults) {
+      if (!searchResults || !Array.isArray(searchResults)) {
         return res.status(400).json({
-          error: 'Search results are required',
+          error: 'Search results array is required',
+          status: 'error',
+        });
+      }
+
+      if (!clientInfo || !clientInfo.email) {
+        return res.status(400).json({
+          error: 'Client info with email is required',
           status: 'error',
         });
       }
@@ -128,7 +262,7 @@ class EmailController {
 
       if (companiesWithEmails.length === 0) {
         return res.status(400).json({
-          error: 'No companies with emails found in results',
+          error: 'Aucune entreprise avec email trouvée',
           status: 'error',
         });
       }
@@ -137,23 +271,30 @@ class EmailController {
         `📧 Sending quote requests to ${companiesWithEmails.length} companies from search results`
       );
 
-      const results = await this.emailService.sendBatch(companiesWithEmails, {
-        userEmail: userEmail || 'contact@sourcebot.fr',
-        keyword: keyword || 'Projet',
-        description: description || '',
-        budget: budget || 'À définir',
-        deadline: deadline || 'À définir',
-      });
+      // Use sendBatch with the filtered companies
+      const req2 = {
+        body: {
+          companies: companiesWithEmails,
+          clientInfo,
+          useAlternateDomain,
+        },
+      };
 
-      return res.status(200).json({
-        status: 'success',
-        message: `Emails sent to ${results.sent.length}/${companiesWithEmails.length} companies`,
-        results,
-      });
+      const res2 = {
+        status: (code) => ({
+          json: (data) => {
+            return data;
+          },
+        }),
+      };
+
+      return res.status(200).json(
+        await this.sendBatch(req2, res2)
+      );
     } catch (error) {
       logger.error('❌ Error in sendToSearchResults:', error);
       return res.status(500).json({
-        error: 'Failed to send emails to search results',
+        error: 'Erreur lors de l\'envoi des emails',
         status: 'error',
         message: error.message,
       });
