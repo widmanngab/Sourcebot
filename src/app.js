@@ -115,6 +115,15 @@ if (process.env.NODE_ENV !== 'test') {
     logger.info(`🚀 Serveur SourceBot démarré sur le port ${PORT}`);
     logger.info(`📝 Environnement: ${process.env.NODE_ENV}`);
     logger.info(`🌐 http://localhost:${PORT}`);
+    
+    // Log API configuration
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (apiKey) {
+      logger.info(`✅ Google Places API configurée: ${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 5)}`);
+    } else {
+      logger.warn(`⚠️ GOOGLE_PLACES_API_KEY non configurée! La recherche ne fonctionnera pas.`);
+      logger.warn(`   Voir GOOGLE_PLACES_API_SETUP.md pour configurer le API Key`);
+    }
   });
 }
 
