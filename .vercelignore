@@ -1,0 +1,11 @@
+src/
+tests/
+.git
+node_modules
+Procfile
+.env
+.env.local
+.env.production
+*.md
+logs/
+data/

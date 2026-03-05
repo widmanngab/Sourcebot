@@ -1,5 +1,11 @@
 {
   "version": 2,
-  "buildCommand": "echo 'Frontend deployed to Vercel'",
-  "outputDirectory": "public"
+  "buildCommand": "npm prune --production",
+  "outputDirectory": "public",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
 }
