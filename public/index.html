@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
   <head>
+    <!-- Updated: 2026-03-05 - 4-step workflow interface -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
@@ -21,104 +22,330 @@
       </header>
 
       <main>
-        <section class="form-container">
-          <h2>🔍 Trouvez des Entreprises & Leurs Emails</h2>
-          <form id="searchForm" class="search-form">
-            <div class="form-group">
-              <label for="keyword">Type d'entreprise (ex: plombiers, électriciens)</label>
-              <input
-                type="text"
-                id="keyword"
-                name="keyword"
-                placeholder="Ex: plombiers, charpentiers, électriciens..."
-                required
-              />
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="location">Région/Ville</label>
-                <input
-                  type="text"
-                  id="location"
-                  name="location"
-                  placeholder="Ex: Paris, Lyon..."
-                  value="France"
-                  required
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="radius">Rayon (km)</label>
-                <input
-                  type="number"
-                  id="radius"
-                  name="radius"
-                  placeholder="50"
-                  min="10"
-                  max="500"
-                  value="50"
-                  required
-                />
-              </div>
-            </div>
-
-            <button type="submit" class="btn-primary">
-              ⚡ Rechercher & Scraper Emails
-            </button>
-          </form>
-        </section>
-
-        <div id="loading" class="loading" style="display: none;">
-          <div class="spinner"></div>
-          <p>Recherche en cours... Patience, le scraping des sites peut prendre quelques minutes ⏳</p>
+        <!-- ÉTAPES PROGRESS INDICATOR -->
+        <div class="steps-indicator">
+          <div class="step active" id="step1-indicator">
+            <span class="step-number">1</span>
+            <span class="step-label">Recherche</span>
+          </div>
+          <div class="step" id="step2-indicator">
+            <span class="step-number">2</span>
+            <span class="step-label">Devis</span>
+          </div>
+          <div class="step" id="step3-indicator">
+            <span class="step-number">3</span>
+            <span class="step-label">Email</span>
+          </div>
+          <div class="step" id="step4-indicator">
+            <span class="step-number">4</span>
+            <span class="step-label">Envoi</span>
+          </div>
         </div>
 
-        <section class="results-container" id="resultsContainer" style="display: none">
-          <div class="results-header">
-            <h2>📊 Résultats</h2>
-            <div class="results-stats">
-              <span class="stat">
-                📍 <strong id="totalCompanies">0</strong> entreprises trouvées
-              </span>
-              <span class="stat">
-                📧 <strong id="companiesWithEmails">0</strong> avec emails extraits
-              </span>
-              <span class="stat">
-                ⏱️ <strong id="duration">0</strong>s
-              </span>
-            </div>
+        <!-- ÉTAPE 1: RECHERCHE -->
+        <section class="step-section active" id="step1-section">
+          <section class="form-container">
+            <h2>🔍 Étape 1: Trouvez des Entreprises</h2>
+            <form id="searchForm" class="search-form">
+              <div class="form-group">
+                <label for="keyword">Type d'entreprise (ex: plombiers, électriciens)</label>
+                <input
+                  type="text"
+                  id="keyword"
+                  name="keyword"
+                  placeholder="Ex: plombiers, charpentiers, électriciens..."
+                  required
+                />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="location">Région/Ville</label>
+                  <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    placeholder="Ex: Paris, Lyon..."
+                    value="France"
+                    required
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="radius">Rayon (km)</label>
+                  <input
+                    type="number"
+                    id="radius"
+                    name="radius"
+                    placeholder="50"
+                    min="10"
+                    max="500"
+                    value="50"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button type="submit" class="btn-primary">
+                ⚡ Rechercher & Scraper Emails
+              </button>
+            </form>
+          </section>
+
+          <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Recherche en cours... Patience, le scraping des sites peut prendre quelques minutes ⏳</p>
           </div>
-          <div id="resultsList" class="results-list"></div>
+
+          <section class="results-container" id="resultsContainer" style="display: none">
+            <div class="results-header">
+              <h2>📊 Résultats de la Recherche</h2>
+              <div class="results-stats">
+                <span class="stat">
+                  📍 <strong id="totalCompanies">0</strong> entreprises trouvées
+                </span>
+                <span class="stat">
+                  📧 <strong id="companiesWithEmails">0</strong> avec emails extraits
+                </span>
+                <span class="stat">
+                  ⏱️ <strong id="duration">0</strong>s
+                </span>
+              </div>
+            </div>
+            <div id="resultsList" class="results-list"></div>
+            
+            <div class="step-navigation">
+              <button type="button" class="btn-secondary" id="continueToStep2">
+                Continuer vers l'étape 2 →
+              </button>
+            </div>
+          </section>
+
+          <div id="error" class="error-message" style="display: none;"></div>
         </section>
 
-        <div id="error" class="error-message" style="display: none;"></div>
+        <!-- ÉTAPE 2: DEMANDE DE DEVIS -->
+        <section class="step-section" id="step2-section">
+          <section class="form-container">
+            <h2>📋 Étape 2: Décrivez votre Demande de Devis</h2>
+            
+            <form id="quoteDetailsForm" class="quote-form">
+              <!-- Info Client -->
+              <fieldset>
+                <legend>👤 Vos Informations</legend>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="clientFirstName">Prénom *</label>
+                    <input
+                      type="text"
+                      id="clientFirstName"
+                      name="firstName"
+                      placeholder="Votre prénom"
+                      required
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="clientLastName">Nom *</label>
+                    <input
+                      type="text"
+                      id="clientLastName"
+                      name="lastName"
+                      placeholder="Votre nom"
+                      required
+                    />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="clientEmail">Email de contact *</label>
+                  <input
+                    type="email"
+                    id="clientEmail"
+                    name="email"
+                    placeholder="votre.email@entreprise.com"
+                    required
+                  />
+                </div>
+              </fieldset>
 
+              <!-- Détails du Projet -->
+              <fieldset>
+                <legend>📝 Détails de votre Demande</legend>
+                <div class="form-group">
+                  <label for="projectDescription">Description technique et détaillée de votre demande *</label>
+                  <textarea
+                    id="projectDescription"
+                    name="description"
+                    placeholder="Décrivez précisément ce que vous recherchez, les caractéristiques techniques, les délais, le budget, etc."
+                    maxlength="5000"
+                    rows="8"
+                    required
+                  ></textarea>
+                  <small id="charCount">0 / 5000 caractères</small>
+                </div>
+              </fieldset>
+
+              <!-- Fichiers -->
+              <fieldset>
+                <legend>📎 Documents & Fichiers (Optionnel)</legend>
+                <div class="form-group">
+                  <label for="projectFiles">Téléchargez vos documents (Plans PDF, images, etc.)</label>
+                  <p class="helper-text">Formats acceptés: PDF, PNG, JPG, DWG, STEP, IGES, ZIP | Max 25MB par fichier | Max 10 fichiers</p>
+                  <input
+                    type="file"
+                    id="projectFiles"
+                    name="files"
+                    multiple
+                    accept=".pdf,.png,.jpg,.dwg,.step,.iges,.zip"
+                  />
+                  <div id="filesPreview" class="files-preview"></div>
+                </div>
+
+                <div class="form-group checkbox">
+                  <input
+                    type="checkbox"
+                    id="filesImportant"
+                    name="filesImportant"
+                  />
+                  <label for="filesImportant">
+                    📌 <strong>Important:</strong> La compréhension détaillée de ces documents est cruciale pour la rédaction des demandes
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Résumé des Entreprises -->
+              <fieldset>
+                <legend>🏢 Entreprises Trouvées</legend>
+                <div class="form-group">
+                  <label for="companiesDropdown">Sélectionnez votre région/entreprises</label>
+                  <select id="companiesDropdown" name="companies">
+                    <option value="">-- Voir les entreprises --</option>
+                  </select>
+                  <div id="companiesQuickView" class="companies-quick-view" style="display: none;">
+                    <!-- Les résultats s'affichent ici -->
+                  </div>
+                </div>
+              </fieldset>
+
+              <div class="step-navigation">
+                <button type="button" class="btn-secondary" id="backToStep1">
+                  ← Revenir à l'étape 1
+                </button>
+                <button type="button" class="btn-primary" id="continueToStep3">
+                  Continuer vers l'étape 3 →
+                </button>
+              </div>
+            </form>
+          </section>
+        </section>
+
+        <!-- ÉTAPE 3: APERÇU & MODIFICATION MAIL -->
+        <section class="step-section" id="step3-section">
+          <section class="form-container">
+            <h2>✉️ Étape 3: Aperçu & Modification du Mail</h2>
+            
+            <div class="email-preview">
+              <div class="email-header">
+                <p><strong>À:</strong> <span id="emailTo">[entreprises sélectionnées]</span></p>
+                <p><strong>Objet:</strong> <span id="emailSubject">[Objet généré]</span></p>
+              </div>
+
+              <div class="email-body">
+                <textarea
+                  id="emailTemplate"
+                  class="email-textarea"
+                  placeholder="Le contenu du mail s'affichera ici..."
+                  rows="15"
+                ></textarea>
+              </div>
+
+              <div class="email-files" id="emailFilesSection" style="display: none;">
+                <h4>📎 Fichiers joints</h4>
+                <div id="emailFilesList" class="email-files-list"></div>
+              </div>
+
+              <div class="email-info">
+                <p>📌 <small>Vous pouvez modifier ce modèle d'email. Les variantes seront générées automatiquement pour chaque entreprise.</small></p>
+              </div>
+            </div>
+
+            <div class="step-navigation">
+              <button type="button" class="btn-secondary" id="backToStep2">
+                ← Revenir à l'étape 2
+              </button>
+              <button type="button" class="btn-primary" id="continueToStep4">
+                Continuer vers l'étape 4 →
+              </button>
+            </div>
+          </section>
+        </section>
+
+        <!-- ÉTAPE 4: SÉLECTION & ENVOI -->
+        <section class="step-section" id="step4-section">
+          <section class="form-container">
+            <h2>🚀 Étape 4: Sélection & Envoi des Demandes</h2>
+            
+            <div class="companies-selection">
+              <h3>Sélectionnez les entreprises auxquelles envoyer les demandes</h3>
+              <div class="select-all">
+                <input type="checkbox" id="selectAllCompanies" />
+                <label for="selectAllCompanies"><strong>Sélectionner toutes les entreprises</strong></label>
+              </div>
+              <div id="companiesList" class="companies-list"></div>
+            </div>
+
+            <div class="selection-summary">
+              <p>Entreprises sélectionnées: <strong id="selectedCount">0</strong> / <strong id="totalCount">0</strong></p>
+            </div>
+
+            <div class="step-navigation">
+              <button type="button" class="btn-secondary" id="backToStep3">
+                ← Revenir à l'étape 3
+              </button>
+              <button type="button" class="btn-primary" id="sendQuotes">
+                ✉️ Envoyer les Demandes
+              </button>
+            </div>
+
+            <div id="sendingProgress" class="sending-progress" style="display: none;">
+              <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+              </div>
+              <p id="progressText">Envoi en cours... 0%</p>
+            </div>
+
+            <div id="sendingResults" class="sending-results" style="display: none;">
+              <h4>📊 Résultats d'envoi</h4>
+              <div id="resultsDetail"></div>
+            </div>
+          </section>
+        </section>
+
+        <!-- SECTION INFO (toujours visible) -->
         <section class="info-container">
           <h2>Comment ça marche ?</h2>
           <div class="info-grid">
             <div class="info-card">
               <div class="info-icon">🔎</div>
               <h3>Recherche</h3>
-              <p>SourceBot find entreprises dans votre secteur via Google Places API</p>
+              <p>SourceBot trouve des entreprises dans votre secteur via Google Places API</p>
             </div>
 
             <div class="info-card">
-              <div class="info-icon">📧</div>
-              <h3>Contact</h3>
-              <p>Extraction automatique des emails depuis les sites web</p>
+              <div class="info-icon">📋</div>
+              <h3>Devis</h3>
+              <p>Décrivez votre demande avec détails techniques et documents</p>
             </div>
 
             <div class="info-card">
-              <div class="info-icon">💌</div>
+              <div class="info-icon">✉️</div>
+              <h3>Email</h3>
+              <p>Aperçu et personnalisation du mail avant envoi</p>
+            </div>
+
+            <div class="info-card">
+              <div class="info-icon">🚀</div>
               <h3>Envoi</h3>
-              <p>Envoi de demandes de devis professionnelles et traçables</p>
-            </div>
-
-            <div class="info-card">
-              <div class="info-icon">✅</div>
-              <h3>Suivi</h3>
-              <p>Réception et parsing automatiques des devis</p>
+              <p>Sélection et envoi automatique à toutes les entreprises</p>
             </div>
           </div>
         </section>
