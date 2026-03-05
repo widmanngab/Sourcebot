@@ -15,6 +15,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy (needed for Railway, Vercel, etc)
+app.set('trust proxy', 1);
+
 // Middleware de sécurité
 app.use(helmet());
 
