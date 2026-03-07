@@ -46,6 +46,23 @@
   --primary-bg: #FFF5F0;
 }
 
+/* Dark Mode Colors */
+[data-theme="dark"] {
+  --text-dark: #F3F4F6;
+  --text-mid: #D1D5DB;
+  --text-light: #9CA3AF;
+  --text-lighter: #6B7280;
+
+  --bg-page: #0F172A;
+  --bg-card: #1E293B;
+  --bg-card-glass: rgba(30, 41, 59, 0.75);
+  --border: #334155;
+  --border-light: #1E293B;
+
+  --primary-light: #7C2D12;
+  --primary-glow: rgba(255, 107, 71, 0.25);
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
@@ -167,6 +184,44 @@ header {
 .nav-pill.active {
   background: var(--text-dark);
   color: white;
+}
+
+/* ---- THEME TOGGLE ---- */
+
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--border-light);
+  background: var(--bg-card);
+  color: var(--text-dark);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: var(--transition);
+  padding: 0;
+  margin: 0;
+}
+
+.theme-toggle:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  transform: scale(1.05);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+.theme-icon {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.theme-toggle:hover .theme-icon {
+  transform: rotate(20deg);
 }
 
 /* ---- HERO ---- */

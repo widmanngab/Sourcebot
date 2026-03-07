@@ -36,7 +36,44 @@ const state = {
 // INITIALIZATION
 // =============================================================================
 
+// =============================================================================
+// THEME MANAGEMENT
+// =============================================================================
+
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme === 'dark' ? 'dark' : 'light');
+  updateThemeToggleButton(savedTheme === 'dark');
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  updateThemeToggleButton(newTheme === 'dark');
+}
+
+function updateThemeToggleButton(isDark) {
+  const btn = document.getElementById('themeToggle');
+  if (btn) {
+    const icon = btn.querySelector('.theme-icon');
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+}
+
+// =============================================================================
+// INITIALIZATION
+// =============================================================================
+
 document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize theme
+  initTheme();
+  const themeToggle = document.getElementById('themeToggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
+  }
+
   // Load config
   try {
     const configResponse = await fetch(`${API_URL}/api/config`);
