@@ -2,7 +2,6 @@ import 'dotenv/config.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
-import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import logger from './utils/logger.js';
@@ -19,30 +18,37 @@ const PORT = config.port;
 // Trust proxy (needed for Railway, Vercel, etc)
 app.set('trust proxy', 1);
 
-// Middleware de sécurité
-app.use(helmet());
-
-// CORS Configuration - Allow requests from Vercel frontend
-const corsOptions = {
-  origin: [
-    /^https:\/\/.*\.vercel\.app$/,
+// CORS - MUST come before helmet
+app.use((req, res, next) => {
+  const origin = req.get('origin');
+  const allowedOrigins = [
+    'https://sourcebot-inky.vercel.app',
+    'https://sourcebot-production.up.railway.app',
     'http://localhost:3000',
     'http://localhost:5173',
-    'http://127.0.0.1:3000',
-    'https://sourcebot-inky.vercel.app',
-    'https://sourcebot-production.up.railway.app'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200
-};
+  ];
+  
+  // Check if origin is allowed or matches vercel.app pattern
+  const isAllowed = allowedOrigins.includes(origin) || /^https:\/\/.*\.vercel\.app$/.test(origin);
+  
+  if (isAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '3600');
+  }
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
 
-// Apply CORS
-app.use(cors(corsOptions));
-
-// Add explicit CORS headers for preflight requests
-app.options('*', cors(corsOptions));
+// Middleware de sécurité
+app.use(helmet());
 
 // Request logging middleware
 app.use((req, res, next) => {
