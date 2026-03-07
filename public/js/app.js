@@ -299,18 +299,28 @@ function setupEmailTemplate() {
 
 function generateEmailTemplate() {
   const { firstName, lastName, description } = state.quoteDetails;
+  
+  // Format the description into structured sections
+  const lines = description.split('\n').filter(line => line.trim());
+  const formattedDescription = lines.map(line => line.trim()).join('\n• ');
+
+  const filesInfo = state.quoteDetails.files && state.quoteDetails.files.length > 0 
+    ? `\n\n━ DOCUMENTS JOINTS ━\n${state.quoteDetails.files.map(f => `• ${f.name}`).join('\n')}`
+    : '';
 
   const template = `Bonjour,
 
-Nous vous contactons afin de vous soumettre une demande de devis pour les services suivants:
+━ DEMANDE DE DEVIS ━
 
-${description}
+INFORMATIONS TECHNIQUES :
+• ${formattedDescription}
 
-Votre interlocuteur:
-${firstName} ${lastName}
-Email: ${state.quoteDetails.email}
+━ COORDONNÉES DU DEMANDEUR ━
+Nom : ${firstName} ${lastName}
+Email : ${state.quoteDetails.email}${filesInfo}
 
-Pouvez-vous nous proposer un devis pour cette demande ?
+━ DÉTAILS DE DEMANDE ━
+Nous sollicitons votre expertise pour établir un devis sur la base des éléments techniques détaillés ci-dessus.
 
 Cordialement,
 ${firstName} ${lastName}`;
