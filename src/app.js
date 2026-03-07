@@ -31,6 +31,7 @@ const corsOptions = {
       'http://localhost:3000',
       'http://localhost:5173',
       'http://127.0.0.1:3000',
+      'https://sourcebot-inky.vercel.app',
     ];
 
     // If no origin header (like in mobile apps), allow it
@@ -52,9 +53,18 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 };
 app.use(cors(corsOptions));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.path}`, {
+    origin: req.get('origin'),
+    ip: req.ip,
+  });
+  next();
+});
 
 // Rate limiting
 const limiter = rateLimit({

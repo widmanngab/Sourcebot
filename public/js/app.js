@@ -675,20 +675,49 @@ async function handleSendQuotes() {
 
       console.log(`● Payload being sent:`, JSON.stringify(emailPayload, null, 2));
 
+      // Fetch with timeout (30 seconds)
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+
       const response = await fetch(`${API_URL}/api/email/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(emailPayload),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeout);
+
       if (response.ok) {
+        const data = await response.json();
+        console.log(`✅ Success response:`, data);
         successResults.push(company.name);
       } else {
-        const errorData = await response.json().catch(() => ({ error: 'Erreur API' }));
-        errorResults.push(`${company.name}: ${errorData.error || 'Erreur inconnue'}`);
+        let errorMessage = 'Erreur API';
+        let errorDetails = '';
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || 'Erreur inconnue';
+          errorDetails = errorData.details || '';
+        } catch (e) {
+          errorMessage = `Erreur ${response.status}: ${response.statusText}`;
+        }
+        
+        console.error(`❌ Error response for ${company.name}:`, { status: response.status, errorMessage, errorDetails });
+        errorResults.push(`${company.name}: ${errorMessage}`);
       }
     } catch (error) {
-      errorResults.push(`${company.name}: ${error.message}`);
+      let errorMsg = error.message;
+      
+      if (error.name === 'AbortError') {
+        errorMsg = 'Timeout - le serveur n\'a pas répondu à temps';
+      } else if (error instanceof TypeError) {
+        errorMsg = 'Erreur de connexion - Vérifiez que le serveur est accessible';
+      }
+      
+      console.error(`⚠️ Error sending email to ${company.name}:`, { errorName: error.name, message: error.message });
+      errorResults.push(`${company.name}: ${errorMsg}`);
     }
 
     // Update progress
@@ -715,59 +744,76 @@ function displaySendingResults(successResults, errorResults) {
     <p style="color: #15803d; margin-bottom: 0.5rem;">
       <strong>${successResults.length}</strong> email(s) ont été traité(s) avec succès.
     </p>
-    <p style="color: #15803d; font-size: 0.9rem;">
+    ${successResults.length > 0 ? `<p style="color: #15803d; font-size: 0.9rem;">
       🧪 <strong>MODE TEST:</strong> Tous les emails ont été envoyés à <strong>fourchettetest@gmail.com</strong>
-    </p>
+    </p>` : ''}
   `;
   detail.appendChild(summary);
 
   // List each sent email
-  const listDiv = document.createElement('div');
-  listDiv.innerHTML = '<h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">📧 Emails traités:</h4>';
+  if (successResults.length > 0) {
+    const listDiv = document.createElement('div');
+    listDiv.innerHTML = '<h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">📧 Emails traités:</h4>';
 
-  successResults.forEach((name, index) => {
-    const item = document.createElement('div');
-    item.className = 'result-item success';
-    item.style.display = 'flex';
-    item.style.justifyContent = 'space-between';
-    item.style.alignItems = 'center';
-    item.innerHTML = `
-      <span>
-        <strong>${index + 1}.</strong> ${name}
-      </span>
-      <span style="background: #10b981; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">
-        ✓ Envoyé
-      </span>
-    `;
-    listDiv.appendChild(item);
-  });
+    successResults.forEach((name, index) => {
+      const item = document.createElement('div');
+      item.className = 'result-item success';
+      item.style.display = 'flex';
+      item.style.justifyContent = 'space-between';
+      item.style.alignItems = 'center';
+      item.style.marginBottom = '0.75rem';
+      item.style.padding = '0.75rem';
+      item.style.background = '#f0fdf4';
+      item.style.borderRadius = '6px';
+      item.innerHTML = `
+        <span style="color: #166534;">
+          <strong>${index + 1}.</strong> ${name}
+        </span>
+        <span style="background: #10b981; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">
+          ✓ Envoyé
+        </span>
+      `;
+      listDiv.appendChild(item);
+    });
 
+    detail.appendChild(listDiv);
+  }
+
+  // Error section
   if (errorResults.length > 0) {
     const errorDiv = document.createElement('div');
-    errorDiv.innerHTML = '<h4 style="margin-top: 1rem; margin-bottom: 1rem; color: #991b1b;">❌ Erreurs:</h4>';
+    errorDiv.style.cssText = 'background: #fee2e2; border: 1px solid #fecaca; padding: 1rem; border-radius: 6px; margin-top: 1rem;';
+    errorDiv.innerHTML = '<h4 style="margin-top: 0; margin-bottom: 1rem; color: #991b1b;">❌ Erreurs d\'envoi:</h4>';
     
     errorResults.forEach((error) => {
       const item = document.createElement('div');
-      item.className = 'result-item error';
-      item.innerHTML = `<span>✗ ${error}</span>`;
+      item.style.cssText = 'background: white; padding: 0.75rem; margin-bottom: 0.75rem; border-left: 4px solid #dc2626; border-radius: 4px;';
+      item.innerHTML = `
+        <div style="color: #861213; font-weight: 600; margin-bottom: 0.25rem;">
+          ✗ ${error.split(':')[0].trim()}
+        </div>
+        <div style="color: #7f1d1d; font-size: 0.9rem;">
+          ${error.includes(':') ? error.split(':').slice(1).join(':').trim() : 'Erreur d\'envoi'}
+        </div>
+      `;
       errorDiv.appendChild(item);
     });
     
-    listDiv.appendChild(errorDiv);
+    detail.appendChild(errorDiv);
   }
-
-  detail.appendChild(listDiv);
 
   // Info box
   const infoDiv = document.createElement('div');
   infoDiv.style.cssText = 'background: #eef2ff; border: 1px solid #bfdbfe; padding: 1rem; border-radius: 6px; margin-top: 1rem;';
   infoDiv.innerHTML = `
     <p style="color: #1e40af; margin: 0; font-size: 0.9rem;">
-      📌 <strong>En mode développement:</strong> Les emails sont simulés et enregistrés dans le système de test.
-      Vérifiez <strong>fourchettetest@gmail.com</strong> pour voir les emails reçus.
+      ${successResults.length > 0 
+        ? '📌 <strong>Mode test:</strong> Les emails sont envoyés à fourchettetest@gmail.com pour vérification.' 
+        : '⚠️ <strong>Conseil:</strong> Vérifiez que le serveur backend est accessible et que les variables d\'environnement sont configurées.'}
     </p>
   `;
   detail.appendChild(infoDiv);
+
 
   results.style.display = 'block';
 }

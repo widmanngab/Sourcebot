@@ -59,6 +59,22 @@ class EmailService {
         return await MockEmailService.sendViaMailjet(mailData);
       }
 
+      // Validate required fields
+      if (!mailData || !mailData.from || !mailData.to || !mailData.subject) {
+        logger.error('Invalid mailData:', { 
+          hasFrom: !!mailData?.from,
+          hasTo: !!mailData?.to,
+          hasSubject: !!mailData?.subject,
+        });
+        throw new Error('Missing required email fields: from, to, subject');
+      }
+
+      logger.info(`📧 Preparing email to send via Mailjet:`, {
+        to: mailData.to?.[0]?.email,
+        subject: mailData.subject,
+        from: mailData.from?.email,
+      });
+
       // Build attachments array for Mailjet API
       const attachments = [];
       if (mailData.attachments && Array.isArray(mailData.attachments)) {
@@ -105,26 +121,43 @@ class EmailService {
         ],
       };
 
+      logger.debug(`📨 Mailjet payload:`, JSON.stringify(payload, null, 2).substring(0, 500));
+
       const response = await axios.post(this.mailjetApiUrl, payload, {
         headers: {
           Authorization: `Basic ${this.mailjetAuth}`,
           'Content-Type': 'application/json',
         },
+        timeout: 30000, // 30 second timeout
       });
 
+      const messageId = response.data.Messages?.[0]?.ID || response.data.Messages?.[0]?.MessageID;
+      
       logger.info(`✅ Email sent via Mailjet API`, {
         to: mailData.to[0].email,
-        messageId: response.data.Messages[0].ID,
+        messageId: messageId,
         attachments: attachments.length,
       });
 
-      return response.data.Messages[0];
+      return {
+        ID: messageId,
+        MessageID: messageId,
+        ...response.data.Messages?.[0]
+      };
     } catch (error) {
       logger.error('❌ Mailjet API error:', {
         status: error.response?.status,
+        statusText: error.response?.statusText,
         message: error.response?.data?.ErrorMessage || error.message,
+        errorData: error.response?.data,
+        errorCode: error.code,
       });
-      throw new Error(error.response?.data?.ErrorMessage || error.message);
+      
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Email sending timeout - Mailjet service took too long to respond');
+      }
+      
+      throw new Error(error.response?.data?.ErrorMessage || error.message || 'Failed to send email via Mailjet');
     }
   }
 
