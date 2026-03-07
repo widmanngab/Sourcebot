@@ -2,6 +2,7 @@ import 'dotenv/config.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
+import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import logger from './utils/logger.js';
@@ -18,40 +19,16 @@ const PORT = config.port;
 // Trust proxy (needed for Railway, Vercel, etc)
 app.set('trust proxy', 1);
 
-// CORS FIRST - MUST come before everything including helmet
-app.use((req, res, next) => {
-  const origin = req.get('origin');
-  
-  // Always allow these origins
-  const allowedOrigins = [
-    'https://sourcebot-inky.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://127.0.0.1:3000',
-  ];
-  
-  const isAllowed = allowedOrigins.includes(origin) || 
-                    (origin && /^https:\/\/.*\.vercel\.app$/.test(origin));
-  
-  logger.info(`CORS Check: origin=${origin}, allowed=${isAllowed}`);
-  
-  // ALWAYS set headers to allow preflight
-  res.setHeader('Access-Control-Allow-Origin', isAllowed && origin ? origin : '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, Content-Type, Authorization, X-Requested-With, Accept');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  
-  // Handle OPTIONS preflight requests
-  if (req.method === 'OPTIONS') {
-    logger.info(`Preflight request from ${origin}`);
-    return res.status(200).end();
-  }
-  
-  next();
-});
+// CORS - Enable ALL origins for now (demo/test mode)
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: false,
+  optionsSuccessStatus: 200,
+}));
 
-// Middleware de sécurité - configure helmet without CORS headers
+// Middleware de sécurité
 app.use(helmet({
   crossOriginResourcePolicy: false,
 }));
