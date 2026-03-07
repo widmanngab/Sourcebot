@@ -75,6 +75,15 @@ class EmailController {
         emailContent.subject = subject;
       }
       
+      // Validate email content
+      if (!emailContent || !emailContent.text || !emailContent.html || !emailContent.subject) {
+        logger.error('❌ Invalid email content generated:', { emailContent });
+        return res.status(500).json({
+          error: 'Failed to generate email content',
+          status: 'error',
+        });
+      }
+      
       const senderInfo = this.variationService.getSenderEmail(useAlternateDomain);
 
       // Déterminer l'email destinataire
@@ -119,7 +128,7 @@ class EmailController {
           email: targetEmail,
           testMode: isTestMode,
           originalEmail: isTestMode ? company.emails[0] : null,
-          messageId: response.MessageID,
+          messageId: response.ID || response.MessageID,
         });
       } catch (error) {
         logger.error(`❌ Failed to send email to ${targetEmail}:`, error.message);
@@ -129,41 +138,51 @@ class EmailController {
           logger.info(`🔄 Trying alternative email...`);
           const altEmail = company.emails[1];
           
-          const response = await this.emailService.sendViaMailjet({
-            from: senderInfo,
-            to: [{
-              email: altEmail,
-              name: company.name,
-            }],
-            replyTo: {
-              email: clientInfo.email,
-              name: clientInfo.name || 'Demandeur',
-            },
-            subject: emailContent.subject,
-            textPart: emailContent.text,
-            htmlPart: emailContent.html,
-            attachments: attachments,
-            customId: `quote-request-${company.placeId}-${Date.now()}`,
-          });
+          try {
+            const response = await this.emailService.sendViaMailjet({
+              from: senderInfo,
+              to: [{
+                email: altEmail,
+                name: company.name,
+              }],
+              replyTo: {
+                email: clientInfo.email,
+                name: clientInfo.name || 'Demandeur',
+              },
+              subject: emailContent.subject,
+              textPart: emailContent.text,
+              htmlPart: emailContent.html,
+              attachments: attachments,
+              customId: `quote-request-${company.placeId}-${Date.now()}`,
+            });
 
-          logger.info(`✅ Email sent to ${altEmail} (alternative)`);
-          
-          return res.status(200).json({
-            status: 'success',
-            message: `Email envoyé à ${company.name} (adresse alternative)`,
-            email: altEmail,
-            messageId: response.MessageID,
-          });
+            logger.info(`✅ Email sent to ${altEmail} (alternative)`);
+            
+            return res.status(200).json({
+              status: 'success',
+              message: `Email envoyé à ${company.name} (adresse alternative)`,
+              email: altEmail,
+              messageId: response.ID || response.MessageID,
+            });
+          } catch (altError) {
+            logger.error(`❌ Failed to send email to alternative address ${altEmail}:`, altError.message);
+            throw altError;
+          }
         }
 
         throw error;
       }
     } catch (error) {
-      logger.error('❌ Error in sendQuote:', error);
+      logger.error('❌ Error in sendQuote:', {
+        errorMessage: error.message,
+        errorStack: error.stack,
+        company: company?.name,
+      });
       return res.status(500).json({
         error: 'Erreur lors de l\'envoi de l\'email',
         status: 'error',
         message: error.message,
+        details: error.message,
       });
     }
   }

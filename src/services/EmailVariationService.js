@@ -12,15 +12,23 @@ class EmailVariationService {
    */
   generateEmailVariation(companyInfo, clientInfo) {
     try {
+      // Validate input
+      if (!companyInfo || !clientInfo) {
+        throw new Error('companyInfo and clientInfo are required');
+      }
+
+      // Use provided description instead of trying to create one
+      const description = clientInfo.description || 'une demande de devis';
+      const clientName = clientInfo.name || `${clientInfo.firstName || ''} ${clientInfo.lastName || ''}`.trim() || 'Un contact';
+      const clientEmail = clientInfo.email || '';
+
       // Rotate through different templates
-      const templateIndex = Math.floor(Math.random() * 5);
+      const templateIndex = Math.floor(Math.random() * 3);
       
       const templates = [
-        this._generateTemplate1(companyInfo, clientInfo),
-        this._generateTemplate2(companyInfo, clientInfo),
-        this._generateTemplate3(companyInfo, clientInfo),
-        this._generateTemplate4(companyInfo, clientInfo),
-        this._generateTemplate5(companyInfo, clientInfo),
+        this._generateTemplate1(companyInfo, clientName, clientEmail, description),
+        this._generateTemplate2(companyInfo, clientName, clientEmail, description),
+        this._generateTemplate3(companyInfo, clientName, clientEmail, description),
       ];
 
       const emailContent = templates[templateIndex];
@@ -36,189 +44,98 @@ class EmailVariationService {
   /**
    * Template 1: Direct & Professional
    */
-  _generateTemplate1(company, client) {
+  _generateTemplate1(company, clientName, clientEmail, description) {
     return {
-      subject: `Demande de ${client.service || 'devis'} - ${client.company || 'Demande professionnelle'}`,
+      subject: `Demande de devis - ${description.split('\n')[0].substring(0, 40)}`,
       text: `Madame, Monsieur,
 
-Je vous contacte au sujet de ${client.description || 'nos besoins en prestation'}.
+Je vous contacte concernant ${description}.
 
-Entreprise: ${client.company || 'Non spécifié'}
-Service demandé: ${client.service || 'Services généraux'}
-${client.budget ? `Budget estimé: ${client.budget}` : ''}
-${client.urgency ? `Délai: ${client.urgency}` : ''}
+Voici les détails de ma demande:
 
-Serait-il possible de me transmettre un devis?
+${description}
+
+Pourriez-vous me transmettre un devis pour cette prestation?
 
 Cordialement,
-${client.name || 'Une personne intéressée'}
-${client.email ? `${client.email}` : ''}
-${client.phone ? `${client.phone}` : ''}`,
+${clientName}
+${clientEmail}`,
       
       html: `<p>Madame, Monsieur,</p>
-<p>Je vous contacte au sujet de <strong>${client.description || 'nos besoins en prestation'}</strong>.</p>
-<ul>
-  <li><strong>Entreprise:</strong> ${client.company || 'Non spécifié'}</li>
-  <li><strong>Service demandé:</strong> ${client.service || 'Services généraux'}</li>
-  ${client.budget ? `<li><strong>Budget estimé:</strong> ${client.budget}</li>` : ''}
-  ${client.urgency ? `<li><strong>Délai:</strong> ${client.urgency}</li>` : ''}
-</ul>
-<p>Serait-il possible de me transmettre un devis?</p>
+<p>Je vous contacte concernant <strong>${description.split('\n')[0]}</strong>.</p>
+<p><strong>Détails de la demande:</strong></p>
+<div style="background-color: #f3f4f6; padding: 12px; border-radius: 6px; margin: 12px 0;">
+  ${description.split('\n').map(line => `<div>• ${line.trim()}</div>`).join('')}
+</div>
+<p>Pourriez-vous me transmettre un devis pour cette prestation?</p>
 <p>Cordialement,<br/>
-${client.name || 'Une personne intéressée'}<br/>
-${client.email ? `${client.email}<br/>` : ''}
-${client.phone ? `${client.phone}` : ''}</p>`,
+<strong>${clientName}</strong><br/>
+${clientEmail}</p>`,
     };
   }
 
   /**
    * Template 2: Concise & Action-oriented
    */
-  _generateTemplate2(company, client) {
+  _generateTemplate2(company, clientName, clientEmail, description) {
     return {
-      subject: `${client.service || 'Prestation'} - Demande de disponibilité`,
+      subject: `Demande de disponibilité - ${description.split('\n')[0].substring(0, 40)}`,
       text: `Bonjour,
 
-Nous recherchons un prestataire pour ${client.description || 'une prestation'}.
+Nous recherchons un prestataire pour ${description.split('\n')[0]}.
 
-Détails:
-- Type: ${client.service || 'À déterminer'}
-- Entreprise: ${client.company || 'Nous'}
-${client.budget ? `- Budget: ${client.budget}` : ''}
-${client.timeline ? `- Timing: ${client.timeline}` : ''}
+Détails complets:
+${description}
 
-Pouvez-vous nous envoyer un devis?
+Disposez-vous de capacités pour cette prestation? 
+Un devis serait très bienvenu.
 
-${client.name || 'Cordialement'}
-${client.email ? `${client.email}` : ''}
-${client.phone ? `${client.phone}` : ''}`,
+Merci,
+${clientName}
+${clientEmail}`,
       
       html: `<p>Bonjour,</p>
-<p>Nous recherchons un prestataire pour <strong>${client.description || 'une prestation'}</strong>.</p>
-<p><strong>Détails:</strong></p>
-<ul>
-  <li>Type: ${client.service || 'À déterminer'}</li>
-  <li>Entreprise: ${client.company || 'Nous'}</li>
-  ${client.budget ? `<li>Budget: ${client.budget}</li>` : ''}
-  ${client.timeline ? `<li>Timing: ${client.timeline}</li>` : ''}
-</ul>
-<p><strong>Pouvez-vous nous envoyer un devis?</strong></p>
-<p>${client.name || 'Cordialement'}<br/>
-${client.email ? `${client.email}<br/>` : ''}
-${client.phone ? `${client.phone}` : ''}</p>`,
+<p>Nous recherchons un prestataire pour <strong>${description.split('\n')[0]}</strong>.</p>
+<p><strong>Détails complets:</strong></p>
+<div style="background-color: #f3f4f6; padding: 12px; border-radius: 6px; margin: 12px 0;">
+  ${description.split('\n').map(line => `<div>• ${line.trim()}</div>`).join('')}
+</div>
+<p>Disposez-vous de capacités pour cette prestation? Un devis serait très bienvenu.</p>
+<p>Merci,<br/>
+<strong>${clientName}</strong><br/>
+${clientEmail}</p>`,
     };
   }
 
   /**
    * Template 3: Question-based
    */
-  _generateTemplate3(company, client) {
+  _generateTemplate3(company, clientName, clientEmail, description) {
     return {
-      subject: `Question concernant votre expérience en ${client.service || 'services'}`,
+      subject: `Demande de prestation - ${description.split('\n')[0].substring(0, 40)}`,
       text: `Bonjour ${company.name ? company.name.split(' ')[0] : 'l\'équipe'},
 
-Pouvez-vous nous aider avec ${client.description || 'une prestation professionnelle'}?
+Pouvez-vous nous aider avec ${description.split('\n')[0]}?
 
-Contexte:
-- Domaine: ${client.service || 'Diversifié'}
-- Demandeur: ${client.company || 'Entreprise'}
-${client.budget ? `- Investissement prévu: ${client.budget}` : ''}
-${client.urgency ? `- Urgence: ${client.urgency}` : ''}
+Contexte et détails:
+${description}
 
-Nous serions intéressés par un devis si cela rentre dans vos compétences.
+Si cette prestation rentre dans vos compétences, nous serions très intéressés par un devis.
 
 Merci,
-${client.name || 'Contact'}
-${client.email ? `${client.email}` : ''}`,
+${clientName}
+${clientEmail}`,
       
       html: `<p>Bonjour ${company.name ? company.name.split(' ')[0] : 'l\'équipe'},</p>
-<p>Pouvez-vous nous aider avec <strong>${client.description || 'une prestation professionnelle'}</strong>?</p>
-<p><strong>Contexte:</strong></p>
-<ul>
-  <li>Domaine: ${client.service || 'Diversifié'}</li>
-  <li>Demandeur: ${client.company || 'Entreprise'}</li>
-  ${client.budget ? `<li>Investissement prévu: ${client.budget}</li>` : ''}
-  ${client.urgency ? `<li>Urgence: ${client.urgency}</li>` : ''}
-</ul>
-<p>Nous serions intéressés par un devis si cela rentre dans vos compétences.</p>
+<p>Pouvez-vous nous aider avec <strong>${description.split('\n')[0]}</strong>?</p>
+<p><strong>Contexte et détails:</strong></p>
+<div style="background-color: #f3f4f6; padding: 12px; border-radius: 6px; margin: 12px 0;">
+  ${description.split('\n').map(line => `<div>• ${line.trim()}</div>`).join('')}
+</div>
+<p>Si cette prestation rentre dans vos compétences, nous serions très intéressés par un devis.</p>
 <p>Merci,<br/>
-${client.name || 'Contact'}<br/>
-${client.email ? `${client.email}` : ''}</p>`,
-    };
-  }
-
-  /**
-   * Template 4: Opportunity-focused
-   */
-  _generateTemplate4(company, client) {
-    return {
-      subject: `Opportunité de collaboration - ${client.service || 'Prestation'}`,
-      text: `Madame, Monsieur,
-
-${client.company || 'Notre entreprise'} envisage de confier ${client.description || 'une mission'} à un partenaire spécialisé.
-
-Vos compétences en ${client.service || 'services'} nous intéressent.
-
-Informations:
-• Projet: ${client.description || 'Prestation à étudier'}
-• Budget: ${client.budget || 'À discuter'}
-${client.timeline ? `• Délai: ${client.timeline}` : ''}
-• Contact: ${client.name || 'Demandeur'}
-
-Pouvez-vous nous transmettre un devis?
-
-${client.email ? `${client.email}` : ''}
-${client.phone ? `${client.phone}` : ''}`,
-      
-      html: `<p>Madame, Monsieur,</p>
-<p>${client.company || 'Notre entreprise'} envisage de confier <strong>${client.description || 'une mission'}</strong> à un partenaire spécialisé.</p>
-<p>Vos compétences en <strong>${client.service || 'services'}</strong> nous intéressent.</p>
-<p><strong>Informations:</strong></p>
-<ul>
-  <li>Projet: ${client.description || 'Prestation à étudier'}</li>
-  <li>Budget: ${client.budget || 'À discuter'}</li>
-  ${client.timeline ? `<li>Délai: ${client.timeline}</li>` : ''}
-  <li>Contact: ${client.name || 'Demandeur'}</li>
-</ul>
-<p><strong>Pouvez-vous nous transmettre un devis?</strong></p>
-<p>${client.email ? `${client.email}<br/>` : ''}
-${client.phone ? `${client.phone}` : ''}</p>`,
-    };
-  }
-
-  /**
-   * Template 5: Short & Practical
-   */
-  _generateTemplate5(company, client) {
-    return {
-      subject: `Devis demandé - ${client.company || 'Demande'}`,
-      text: `Bonjour,
-
-Serait-il possible d'obtenir un devis pour le service suivant?
-
-Service: ${client.service || 'À préciser'}
-Description: ${client.description || 'Prestation professionnelle'}
-${client.budget ? `Budget: ${client.budget}` : ''}
-${client.timeline ? `Timing: ${client.timeline}` : ''}
-
-Merci d'avance.
-
-${client.name || 'Demandeur'}
-${client.email ? `E-mail: ${client.email}` : ''}
-${client.phone ? `Tél: ${client.phone}` : ''}`,
-      
-      html: `<p>Bonjour,</p>
-<p>Serait-il possible d'obtenir un devis pour le service suivant?</p>
-<table style="border-collapse: collapse; margin: 15px 0;">
-  <tr><td><strong>Service:</strong></td><td>${client.service || 'À préciser'}</td></tr>
-  <tr><td><strong>Description:</strong></td><td>${client.description || 'Prestation professionnelle'}</td></tr>
-  ${client.budget ? `<tr><td><strong>Budget:</strong></td><td>${client.budget}</td></tr>` : ''}
-  ${client.timeline ? `<tr><td><strong>Timing:</strong></td><td>${client.timeline}</td></tr>` : ''}
-</table>
-<p>Merci d'avance.</p>
-<p>${client.name || 'Demandeur'}<br/>
-${client.email ? `E-mail: ${client.email}<br/>` : ''}
-${client.phone ? `Tél: ${client.phone}` : ''}</p>`,
+<strong>${clientName}</strong><br/>
+${clientEmail}</p>`,
     };
   }
 
