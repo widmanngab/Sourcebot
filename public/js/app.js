@@ -342,6 +342,96 @@ function cleanTechnicalDescription(text) {
   }).join('\n');
 }
 
+function reformulateTechnicalPoint(line) {
+  // Reformulate each technical point in a completely different way
+  
+  // Pattern: "X units/year in multiple orders of Y"
+  if (line.match(/\d+\s*units?\s*\/\s*an|year/i) && line.match(/\d+\s*pc|pièces?|orders?/i)) {
+    const match = line.match(/(\d+)\s*units?\s*(?:\/an|\/year).*?(\d+)\s*pc/i);
+    if (match) {
+      const total = match[1];
+      const perOrder = match[2];
+      const variations = [
+        `Besoin annuel: ${total} unités par commandes de ${perOrder} pièces`,
+        `Volume: ${total} pièces/an en plusieurs livraisons de ${perOrder} pc`,
+        `Nous cherchons ${perOrder} pc par commande pour une quantité totale de ${total} units/an`,
+        `Commandes régulières: ${perOrder} pièces pour atteindre les ${total} units annuellement`
+      ];
+      return variations[Math.floor(Math.random() * variations.length)];
+    }
+  }
+  
+  // Pattern: "Looking for X to make parts of Y x Y x Y in material Z"
+  if (line.match(/cherche|looking|find|souhait/i) && line.match(/(\d+\s*(cm|mm))\s*[\/x]\s*(\d+\s*(cm|mm))/i)) {
+    const dimMatch = line.match(/(\d+\s*(?:cm|mm))\s*[\/x]\s*(\d+\s*(?:cm|mm))\s*[\/x]\s*(\d+\s*(?:cm|mm))/i);
+    const materialMatch = line.match(/(PP|PE|ABS|PVC|plastique|plastic)/i);
+    const methodMatch = line.match(/(thermoformeur|injection|moulage|usinage|manufacturing|service)/i);
+    
+    if (dimMatch && materialMatch) {
+      const dims = `${dimMatch[1]} x ${dimMatch[2]} x ${dimMatch[3]}`;
+      const material = materialMatch[1];
+      const method = methodMatch ? methodMatch[1] : 'fabrication';
+      
+      const variations = [
+        `${method} pour pièces ${material}: ${dims}`,
+        `Pièces ${material} ${dims} par ${method}`,
+        `Prestation: ${dims} en ${material} par ${method}`,
+        `Besoin de ${method} pour fabriquer des pièces de ${dims} en ${material}`
+      ];
+      return variations[Math.floor(Math.random() * variations.length)];
+    }
+  }
+  
+  // Pattern: "Already has molds"
+  if (line.match(/moules|molds|already\s+has|déjà\s+les?|possè/i) && line.match(/aluminium|steel|acier/i)) {
+    const material = line.match(/(aluminium|acier|steel)/i)[1];
+    const variations = [
+      `Moules fournis: ${material}`,
+      `Outillage ${material} disponible`,
+      `Nous disposons des moules en ${material}`,
+      `Moules existants: ${material}`
+    ];
+    return variations[Math.floor(Math.random() * variations.length)];
+  }
+  
+  // Pattern: "Color X"
+  if (line.match(/couleur|color|teinte|finishing/i)) {
+    const colorMatch = line.match(/(orange|bleu|rouge|green|etc\.?|etc|black|white|noir|blanc)/i);
+    if (colorMatch) {
+      const color = colorMatch[1];
+      const variations = [
+        `Finition: ${color}`,
+        `Couleur demandée: ${color}`,
+        `Teinte: ${color}`,
+        `Peinture/teinte: ${color}`
+      ];
+      return variations[Math.floor(Math.random() * variations.length)];
+    }
+  }
+  
+  // Pattern: "Plastic sheets of X thickness"
+  if (line.match(/plastique|plastic|plaques?|sheets?/i) && line.match(/(\d+\s*(?:mm|cm))\s*(?:d['\']?épaisseur|thickness|thick)/i)) {
+    const thicknessMatch = line.match(/(\d+\s*(?:mm|cm))/);
+    if (thicknessMatch) {
+      const thickness = thicknessMatch[1];
+      const variations = [
+        `Épaisseur matière: ${thickness}`,
+        `Plastique ${thickness} d'épaisseur`,
+        `Matière première: ${thickness} de plastique`,
+        `Spécification: plaques ${thickness}`
+      ];
+      return variations[Math.floor(Math.random() * variations.length)];
+    }
+  }
+  
+  // Default: remove subject prefixes and return
+  let reformulated = line;
+  reformulated = reformulated.replace(/^(je|nous|on)\s+(cherche|suis|ai|avons?|sommes|voudrais?|voulons?)\s+/i, '');
+  reformulated = reformulated.replace(/^(je|nous|on)\s+/i, '');
+  
+  return reformulated.charAt(0).toUpperCase() + reformulated.slice(1);
+}
+
 function reformatTechnicalPoints(bulletText, shouldVary = false) {
   // Extract bullet points
   const lines = bulletText.split('\n')
@@ -352,28 +442,10 @@ function reformatTechnicalPoints(bulletText, shouldVary = false) {
     return bulletText;
   }
 
-  // Shuffle array randomly
+  // Shuffle array randomly AND reformulate each line
   const shuffled = lines.sort(() => Math.random() - 0.5);
-
-  // Optionally reformulate some lines with variations
-  const reformulated = shuffled.map((line, index) => {
-    const shouldReformulate = Math.random() > 0.5; // 50% chance to reformulate
-    
-    if (shouldReformulate && index % 2 === 0) {
-      // Transform "X dimensions" to "Dimensions: X" format
-      // Or add slight variations
-      if (line.toLowerCase().includes('dimensions') || 
-          line.match(/\d+\s*(cm|mm|m|kg)/i)) {
-        // Already good format, keep it
-        return line;
-      } else if (line.match(/^(nous|on|je)\s+/i)) {
-        // Remove subject prefix for variety
-        return line.replace(/^(nous|on|je)\s+/i, '').replace(/^(avons?|ai)\s+/i, '');
-      }
-    }
-    
-    return line;
-  });
+  
+  const reformulated = shuffled.map(line => reformulateTechnicalPoint(line));
 
   return reformulated.map(line => `• ${line}`).join('\n');
 }
