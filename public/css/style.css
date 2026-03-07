@@ -230,6 +230,11 @@ header {
   position: relative;
   padding: 3rem 0 2rem;
   overflow: hidden;
+  background: transparent;
+}
+
+[data-theme="dark"] .hero {
+  background: transparent !important;
 }
 
 .hero-blob {
@@ -260,6 +265,11 @@ header {
   position: relative;
   z-index: 1;
   max-width: 700px;
+  background: transparent;
+}
+
+[data-theme="dark"] .hero-content {
+  background: transparent !important;
 }
 
 .hero-tag {
@@ -273,6 +283,11 @@ header {
   margin-bottom: 1.25rem;
 }
 
+[data-theme="dark"] .hero-tag {
+  background: rgba(255, 107, 71, 0.15);
+  color: #FF8A65;
+}
+
 .hero-title {
   font-size: 2.75rem;
   font-weight: 800;
@@ -280,6 +295,12 @@ header {
   letter-spacing: -0.03em;
   color: var(--text-dark);
   margin-bottom: 1rem;
+  background: transparent;
+}
+
+[data-theme="dark"] .hero-title {
+  background: transparent !important;
+  color: #F3F4F6;
 }
 
 .text-gradient {
