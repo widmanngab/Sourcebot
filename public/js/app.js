@@ -310,7 +310,7 @@ function generateEmailTemplate() {
 
   const template = `Bonjour,
 
-Je vous contacte afin d'obtenir un devis pour une demande spécifique. Après consultation de votre entreprise, je pense que votre expertise correspond à nos besoins.
+Je vous contacte afin d'obtenir un devis pour un projet.
 
 Voici les éléments techniques détaillant ma demande :
 
