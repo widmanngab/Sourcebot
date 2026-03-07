@@ -18,37 +18,43 @@ const PORT = config.port;
 // Trust proxy (needed for Railway, Vercel, etc)
 app.set('trust proxy', 1);
 
-// CORS - MUST come before helmet
+// CORS FIRST - MUST come before everything including helmet
 app.use((req, res, next) => {
   const origin = req.get('origin');
+  
+  // Always allow these origins
   const allowedOrigins = [
     'https://sourcebot-inky.vercel.app',
-    'https://sourcebot-production.up.railway.app',
     'http://localhost:3000',
     'http://localhost:5173',
+    'http://127.0.0.1:3000',
   ];
   
-  // Check if origin is allowed or matches vercel.app pattern
-  const isAllowed = allowedOrigins.includes(origin) || /^https:\/\/.*\.vercel\.app$/.test(origin);
+  const isAllowed = allowedOrigins.includes(origin) || 
+                    (origin && /^https:\/\/.*\.vercel\.app$/.test(origin));
   
-  if (isAllowed) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Max-Age', '3600');
-  }
+  logger.info(`CORS Check: origin=${origin}, allowed=${isAllowed}`);
   
-  // Handle preflight
+  // ALWAYS set headers to allow preflight
+  res.setHeader('Access-Control-Allow-Origin', isAllowed && origin ? origin : '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, Content-Type, Authorization, X-Requested-With, Accept');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  // Handle OPTIONS preflight requests
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    logger.info(`Preflight request from ${origin}`);
+    return res.status(200).end();
   }
   
   next();
 });
 
-// Middleware de sécurité
-app.use(helmet());
+// Middleware de sécurité - configure helmet without CORS headers
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}));
 
 // Request logging middleware
 app.use((req, res, next) => {
