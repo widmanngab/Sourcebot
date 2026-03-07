@@ -225,23 +225,6 @@ function setupQuoteDetailsForm() {
   document.getElementById('filesImportant').addEventListener('change', (e) => {
     state.quoteDetails.filesImportant = e.target.checked;
   });
-
-  // Companies dropdown change handler
-  const dropdown = document.getElementById('companiesDropdown');
-  const quickView = document.getElementById('companiesQuickView');
-  dropdown.addEventListener('change', (e) => {
-    if (e.target.value === '') {
-      quickView.style.display = 'none';
-    } else {
-      const company = state.searchResults[parseInt(e.target.value)];
-      quickView.innerHTML = `
-        <strong>${company.name}</strong><br>
-        📍 ${company.address}<br>
-        ${company.emails && company.emails.length > 0 ? `📧 ${company.emails.join(', ')}` : '📧 Pas d\'emails trouvés'}
-      `;
-      quickView.style.display = 'block';
-    }
-  });
 }
 
 function handleFileUpload(e) {
@@ -301,24 +284,6 @@ function handleFileUpload(e) {
   if (errors.length > 0) {
     showError(errors.join('\n'));
   }
-}
-
-function updateCompaniesDropdown() {
-  const dropdown = document.getElementById('companiesDropdown');
-
-  if (state.searchResults.length === 0) {
-    dropdown.innerHTML = '<option>-- Aucune entreprise trouvée --</option>';
-    return;
-  }
-
-  dropdown.innerHTML = '<option value="">-- Sélectionner une entreprise --</option>';
-
-  state.searchResults.forEach((company, index) => {
-    const option = document.createElement('option');
-    option.value = index;
-    option.textContent = company.name || 'N/A';
-    dropdown.appendChild(option);
-  });
 }
 
 // =============================================================================
@@ -579,7 +544,6 @@ function setupStepNavigation() {
       showError('Veuillez faire une recherche d\'abord');
       return;
     }
-    updateCompaniesDropdown();
     goToStep(2);
   });
 
