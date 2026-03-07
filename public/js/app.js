@@ -300,30 +300,27 @@ function setupEmailTemplate() {
 function generateEmailTemplate() {
   const { firstName, lastName, description } = state.quoteDetails;
   
-  // Format the description into structured sections
+  // Format the description into bullet points
   const lines = description.split('\n').filter(line => line.trim());
-  const formattedDescription = lines.map(line => line.trim()).join('\n• ');
+  const bulletPoints = lines.map(line => `• ${line.trim()}`).join('\n');
 
   const filesInfo = state.quoteDetails.files && state.quoteDetails.files.length > 0 
-    ? `\n\n━ DOCUMENTS JOINTS ━\n${state.quoteDetails.files.map(f => `• ${f.name}`).join('\n')}`
+    ? `\n\nDocuments joints :\n${state.quoteDetails.files.map(f => `• ${f.name}`).join('\n')}`
     : '';
 
   const template = `Bonjour,
 
-━ DEMANDE DE DEVIS ━
+Je vous contacte afin d'obtenir un devis pour une demande spécifique. Après consultation de votre entreprise, je pense que votre expertise correspond à nos besoins.
 
-INFORMATIONS TECHNIQUES :
-• ${formattedDescription}
+Voici les éléments techniques détaillant ma demande :
 
-━ COORDONNÉES DU DEMANDEUR ━
-Nom : ${firstName} ${lastName}
-Email : ${state.quoteDetails.email}${filesInfo}
+${bulletPoints}${filesInfo}
 
-━ DÉTAILS DE DEMANDE ━
-Nous sollicitons votre expertise pour établir un devis sur la base des éléments techniques détaillés ci-dessus.
+Je reste à votre disposition pour tout complément d'information ou clarification.
 
 Cordialement,
-${firstName} ${lastName}`;
+${firstName} ${lastName}
+${state.quoteDetails.email}`;
 
   return template;
 }
