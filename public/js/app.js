@@ -308,11 +308,48 @@ function setupEmailTemplate() {
   }
 }
 
+function cleanTechnicalDescription(text) {
+  // Split into lines and clean each one
+  const lines = text.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  return lines.map(line => {
+    let cleaned = line;
+
+    // Remove leading dashes, asterisks, or bullet points
+    cleaned = cleaned.replace(/^[\-\*•]+\s*/, '').trim();
+
+    // Capitalize first letter
+    if (cleaned.length > 0) {
+      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    }
+
+    // Fix spacing around punctuation
+    cleaned = cleaned.replace(/\s+([.,;:!?])/g, '$1');
+    cleaned = cleaned.replace(/([,;:!?])\s*/g, '$1 ').trim();
+
+    // Remove trailing spaces before punctuation
+    cleaned = cleaned.replace(/\s+$/, '');
+
+    // Ensure proper spacing after abbreviations like "cm", "mm", "kg", etc
+    cleaned = cleaned.replace(/(\d+)(cm|mm|m|kg|g|l|ml|€|euros|%)/gi, '$1 $2');
+
+    // Fix units with fractions (e.g., "50cm/50cm" -> "50 cm / 50 cm")
+    cleaned = cleaned.replace(/(\d+)(cm|mm|m|kg)\/(\d+)(cm|mm|m|kg)/gi, '$1 $2 / $3 $4');
+
+    return cleaned;
+  }).join('\n');
+}
+
 function generateEmailTemplate(isAlternate = false) {
   const { firstName, lastName, description } = state.quoteDetails;
   
+  // Clean and format the technical description
+  const cleanedDescription = cleanTechnicalDescription(description);
+  
   // Format the description into bullet points
-  const lines = description.split('\n').filter(line => line.trim());
+  const lines = cleanedDescription.split('\n').filter(line => line.trim());
   const bulletPoints = lines.map(line => `• ${line.trim()}`).join('\n');
 
   const filesInfo = state.quoteDetails.files && state.quoteDetails.files.length > 0 
