@@ -130,11 +130,18 @@ function displayResults() {
   resultsList.innerHTML = '';
 
   if (state.searchResults.length === 0) {
-    resultsList.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>Aucune entreprise trouvée</p></div>';
+    resultsList.innerHTML = '<div class="empty-state"><div class="empty-icon">⊙</div><p>Aucune entreprise trouvée</p></div>';
     return;
   }
 
-  state.searchResults.forEach((company) => {
+  // Sort results: companies with emails first
+  const sortedResults = [...state.searchResults].sort((a, b) => {
+    const aHasEmails = a.emails && a.emails.length > 0 ? 1 : 0;
+    const bHasEmails = b.emails && b.emails.length > 0 ? 1 : 0;
+    return bHasEmails - aHasEmails; // Higher value comes first
+  });
+
+  sortedResults.forEach((company) => {
     const card = createCompanyCard(company);
     resultsList.appendChild(card);
   });
@@ -144,36 +151,53 @@ function createCompanyCard(company) {
   const card = document.createElement('div');
   card.className = 'company-card';
 
-  const emails = company.emails && company.emails.length > 0 ? company.emails : [];
-  const emailsHtml = emails.map((email) => `<a href="mailto:${email}">${email}</a>`).join('<br>');
+  const hasEmails = company.emails && company.emails.length > 0;
+  const emailsHtml = hasEmails ? company.emails.map((email) => `<a href="mailto:${email}">${email}</a>`).join('<br>') : '<em>Non trouvés</em>';
+
+  const cardId = 'card-' + Math.random().toString(36).substr(2, 9);
 
   card.innerHTML = `
-    <div class="company-header">
-      <div class="company-name">${company.name || 'N/A'}</div>
+    <div class="company-header" onclick="toggleCompanyDetails('${cardId}')">
+      <div class="company-name-section">
+        <span class="toggle-icon">▶</span>
+        <div class="company-name">${company.name || 'N/A'}</div>
+        ${hasEmails ? '<span class="email-badge">● Email trouvé</span>' : ''}
+      </div>
       ${company.rating ? `<div class="company-rating">⭐ ${company.rating}</div>` : ''}
     </div>
-    <div class="company-info">
+    <div class="company-details" id="${cardId}" style="display: none;">
       <div class="company-info-item">
-        <strong>📍 Adresse:</strong>
+        <strong>Adresse:</strong>
         <span>${company.address || 'N/A'}</span>
       </div>
       <div class="company-info-item">
-        <strong>📞 Tél:</strong>
+        <strong>Tél:</strong>
         <span>${company.phone || 'N/A'}</span>
       </div>
       <div class="company-info-item">
-        <strong>🌐 Site:</strong>
+        <strong>Site:</strong>
         ${company.website ? `<a href="${company.website}" target="_blank">${company.website}</a>` : '<span>N/A</span>'}
       </div>
       <div class="company-info-item">
-        <strong>📧 Emails:</strong>
-        <span>${emails.length > 0 ? 'Trouvés ✓' : 'Non trouvés ✗'}</span>
+        <strong>Emails:</strong>
+        <div class="emails-list">${emailsHtml}</div>
       </div>
     </div>
-    ${emails.length > 0 ? `<div class="company-emails"><div class="company-emails-title">Emails extraits:</div><div class="emails-list">${emailsHtml}</div></div>` : ''}
   `;
 
   return card;
+}
+
+function toggleCompanyDetails(cardId) {
+  const details = document.getElementById(cardId);
+  const icon = details.previousElementSibling.querySelector('.toggle-icon');
+  if (details.style.display === 'none') {
+    details.style.display = 'block';
+    icon.textContent = '▼';
+  } else {
+    details.style.display = 'none';
+    icon.textContent = '▶';
+  }
 }
 
 // =============================================================================
