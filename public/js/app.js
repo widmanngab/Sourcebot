@@ -158,15 +158,13 @@ function createCompanyCard(company) {
 
   card.innerHTML = `
     <div class="company-header" onclick="toggleCompanyDetails('${cardId}')">
-      <div class="company-header-top">
-        <div class="company-name-section">
-          <span class="toggle-icon">▶</span>
-          <div class="company-name">${company.name || 'N/A'}</div>
-        </div>
-        <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
-          ${hasEmails ? '<span class="email-badge">● Email trouvé</span>' : ''}
-          ${company.rating ? `<div class="company-rating">⭐ ${company.rating}</div>` : ''}
-        </div>
+      <div class="company-name-section">
+        <span class="toggle-icon">▶</span>
+        <div class="company-name">${company.name || 'N/A'}</div>
+      </div>
+      <div class="company-header-badges">
+        ${hasEmails ? '<span class="email-badge">● Email trouvé</span>' : ''}
+        ${company.rating ? `<div class="company-rating">⭐ ${company.rating}</div>` : ''}
       </div>
     </div>
     <div class="company-details" id="${cardId}" style="display: none;">
