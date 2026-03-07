@@ -24,38 +24,25 @@ app.use(helmet());
 
 // CORS Configuration - Allow requests from Vercel frontend
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow all Vercel deployments, localhost, and production domain
-    const allowedOrigins = [
-      /^https:\/\/.*\.vercel\.app$/,
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://127.0.0.1:3000',
-      'https://sourcebot-inky.vercel.app',
-    ];
-
-    // If no origin header (like in mobile apps), allow it
-    if (!origin) return callback(null, true);
-
-    // Check if origin matches any allowed pattern
-    const isAllowed = allowedOrigins.some(allowedOrigin => {
-      if (allowedOrigin instanceof RegExp) {
-        return allowedOrigin.test(origin);
-      }
-      return allowedOrigin === origin;
-    });
-
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS not allowed for origin: ${origin}`));
-    }
-  },
+  origin: [
+    /^https:\/\/.*\.vercel\.app$/,
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'https://sourcebot-inky.vercel.app',
+    'https://sourcebot-production.up.railway.app'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200
 };
+
+// Apply CORS
 app.use(cors(corsOptions));
+
+// Add explicit CORS headers for preflight requests
+app.options('*', cors(corsOptions));
 
 // Request logging middleware
 app.use((req, res, next) => {
