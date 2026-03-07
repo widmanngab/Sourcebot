@@ -14,8 +14,10 @@ class EmailController {
    * Body: { company, clientInfo, subject, attachments, useAlternateDomain }
    */
   async sendQuote(req, res) {
+    let company; // Declare outside try block so it's accessible in catch
+    
     try {
-      const { company, clientInfo, subject = null, attachments = [], useAlternateDomain = false } = req.body;
+      ({ company, clientInfo, subject = null, attachments = [], useAlternateDomain = false } = req.body);
 
       // Debug logging
       logger.info(`📨 Email send request received:`, {
@@ -183,6 +185,7 @@ class EmailController {
         status: 'error',
         message: error.message,
         details: error.message,
+        company: company?.name,
       });
     }
   }
