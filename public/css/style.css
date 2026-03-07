@@ -237,6 +237,24 @@ header {
   background: transparent !important;
 }
 
+[data-theme="dark"] .hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100vw;
+  right: -100vw;
+  bottom: 0;
+  background: rgba(30, 41, 59, 0.4);
+  z-index: 0;
+  pointer-events: none;
+}
+
+[data-theme="dark"] .hero-content {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
 .hero-blob {
   position: absolute;
   border-radius: 50%;
@@ -266,10 +284,6 @@ header {
   z-index: 1;
   max-width: 700px;
   background: transparent;
-}
-
-[data-theme="dark"] .hero-content {
-  background: transparent !important;
 }
 
 .hero-tag {
