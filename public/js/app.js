@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (state.testMode) {
       showTestModeBanner();
-      console.log(`🧪 TEST MODE ENABLED - Emails will be sent to: ${state.testEmail}`);
+      console.log(`⊞ TEST MODE ENABLED - Emails will be sent to: ${state.testEmail}`);
     }
   } catch (error) {
     console.warn('Could not load config:', error);
@@ -428,8 +428,8 @@ async function handleSendQuotes() {
 
     try {
       // Debug logging
-      console.log(`📧 Sending email to company:`, company);
-      console.log(`📧 Company emails:`, company.emails);
+      console.log(`● Sending email to company:`, company);
+      console.log(`● Company emails:`, company.emails);
 
       const emailPayload = {
         company: company,
@@ -442,7 +442,7 @@ async function handleSendQuotes() {
         useAlternateDomain: false,
       };
 
-      console.log(`📧 Payload being sent:`, JSON.stringify(emailPayload, null, 2));
+      console.log(`● Payload being sent:`, JSON.stringify(emailPayload, null, 2));
 
       const response = await fetch(`${API_URL}/api/email/send`, {
         method: 'POST',

@@ -6,14 +6,15 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import logger from './utils/logger.js';
+import config from './config.js';
+import errorHandler from './middleware/errorHandler.js';
 import searchRoutes from './routes/searchRoutes.js';
-import scrapingRoutes from './routes/scrapingRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = config.port;
 
 // Trust proxy (needed for Railway, Vercel, etc)
 app.set('trust proxy', 1);
@@ -57,8 +58,8 @@ app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.maxRequests,
   message: 'Trop de requêtes, veuillez réessayer plus tard.',
 });
 
@@ -84,9 +85,6 @@ app.get('/api', (req, res) => {
 // Use search routes
 app.use('/api', searchRoutes);
 
-// Use scraping routes
-app.use('/api', scrapingRoutes);
-
 // Use email routes
 app.use('/api', emailRoutes);
 
@@ -100,29 +98,30 @@ app.get('*', (req, res) => {
   }
 });
 
-// Error handler
-app.use((err, req, res, next) => {
-  logger.error('Erreur serveur:', err);
-  res.status(err.status || 500).json({
-    error: err.message || 'Erreur serveur interne',
-    status: err.status || 500,
-  });
-});
+// Global error handler middleware (must be last)
+app.use(errorHandler);
 
 // Démarrer le serveur
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
-    logger.info(`🚀 Serveur SourceBot démarré sur le port ${PORT}`);
-    logger.info(`📝 Environnement: ${process.env.NODE_ENV}`);
-    logger.info(`🌐 http://localhost:${PORT}`);
+    logger.info(`Server started on port ${PORT}`);
+    logger.info(`Environment: ${config.nodeEnv}`);
+    logger.info(`URL: http://localhost:${PORT}`);
     
-    // Log API configuration
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-    if (apiKey) {
-      logger.info(`✅ Google Places API configurée: ${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 5)}`);
+    // Log API configuration status
+    if (config.googlePlacesApiKey) {
+      logger.info(`Google Places API configured`);
     } else {
-      logger.warn(`⚠️ GOOGLE_PLACES_API_KEY non configurée! La recherche ne fonctionnera pas.`);
-      logger.warn(`   Voir GOOGLE_PLACES_API_SETUP.md pour configurer le API Key`);
+      logger.warn(`Google Places API not configured. Search will not work.`);
+      logger.warn(`See GOOGLE_PLACES_API_SETUP.md for setup instructions`);
+    }
+
+    if (config.testMode) {
+      logger.warn(`TEST MODE ENABLED - Emails will be sent to: ${config.testEmail}`);
+    }
+
+    if (config.mockEmailMode) {
+      logger.warn(`MOCK EMAIL MODE ENABLED - Emails will be simulated`);
     }
   });
 }

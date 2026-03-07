@@ -6,7 +6,7 @@ class GooglePlacesService {
     this.apiKey = apiKey;
     this.baseUrl = 'https://maps.googleapis.com/maps/api/place';
     if (!apiKey) {
-      logger.warn('⚠️ Google Places API Key not configured');
+      logger.warn('Google Places API Key not configured');
     }
   }
 
@@ -15,7 +15,7 @@ class GooglePlacesService {
    */
   async textSearch(query, location = 'France') {
     try {
-      logger.info(`🔍 Text Search: "${query}" in ${location}`);
+      logger.info(`Text Search: "${query}" in ${location}`);
       
       const response = await axios.get(`${this.baseUrl}/textsearch/json`, {
         params: {
@@ -26,20 +26,19 @@ class GooglePlacesService {
       });
 
       if (response.data.status !== 'OK') {
-        logger.error(`❌ Text Search failed with status: ${response.data.status}`, {
+        logger.error(`Text Search failed with status: ${response.data.status}`, {
           status: response.data.status,
           errorMessage: response.data.error_message,
-          query: `${query} ${location}`,
         });
         return [];
       }
 
       const results = response.data.results || [];
-      logger.info(`✅ Text Search found ${results.length} results`);
+      logger.info(`Text Search found ${results.length} results`);
       
       return results;
     } catch (error) {
-      logger.error('❌ Text Search failed', { query, error: error.message });
+      logger.error(`Text Search failed: ${error.message}`, { query });
       throw error;
     }
   }
@@ -49,7 +48,7 @@ class GooglePlacesService {
    */
   async nearbySearch(latitude, longitude, radius = 50000, keyword = '') {
     try {
-      logger.info(`🔍 Nearby Search: ${keyword} at ${latitude},${longitude} (${radius}m)`);
+      logger.info(`Nearby Search: ${keyword} at ${latitude},${longitude} (${radius}m)`);
       
       const response = await axios.get(`${this.baseUrl}/nearbysearch/json`, {
         params: {
@@ -62,25 +61,19 @@ class GooglePlacesService {
       });
 
       if (response.data.status !== 'OK') {
-        logger.error(`❌ Nearby Search failed with status: ${response.data.status}`, {
+        logger.error(`Nearby Search failed with status: ${response.data.status}`, {
           status: response.data.status,
           errorMessage: response.data.error_message,
-          location: `${latitude},${longitude}`,
-          keyword,
         });
         return [];
       }
 
       const results = response.data.results || [];
-      logger.info(`✅ Nearby Search found ${results.length} results`);
+      logger.info(`Nearby Search found ${results.length} results`);
       
       return results;
     } catch (error) {
-      logger.error('❌ Nearby Search failed', { 
-        latitude, 
-        longitude, 
-        error: error.message 
-      });
+      logger.error(`Nearby Search failed: ${error.message}`, { latitude, longitude });
       throw error;
     }
   }
@@ -90,7 +83,7 @@ class GooglePlacesService {
    */
   async getPlaceDetails(placeId) {
     try {
-      logger.info(`📋 Getting details for place: ${placeId}`);
+      logger.info(`Getting details for place: ${placeId}`);
       
       const response = await axios.get(`${this.baseUrl}/details/json`, {
         params: {
@@ -112,16 +105,15 @@ class GooglePlacesService {
       });
 
       if (response.data.status !== 'OK') {
-        logger.error(`❌ Place Details failed with status: ${response.data.status}`, {
+        logger.error(`Place Details failed with status: ${response.data.status}`, {
           status: response.data.status,
           errorMessage: response.data.error_message,
-          placeId,
         });
         return null;
       }
 
       const result = response.data.result || {};
-      logger.info(`✅ Place details retrieved for: ${result.name}`);
+      logger.info(`Place details retrieved for: ${result.name}`);
       
       return {
         placeId,
@@ -137,10 +129,7 @@ class GooglePlacesService {
         openingHours: result.opening_hours?.weekday_text || [],
       };
     } catch (error) {
-      logger.error('❌ Place Details failed', { 
-        placeId, 
-        error: error.message 
-      });
+      logger.error(`Place Details failed: ${error.message}`, { placeId });
       throw error;
     }
   }
@@ -150,17 +139,17 @@ class GooglePlacesService {
    */
   async comprehensiveSearch(keyword, location = 'France', maxRadius = 100) {
     try {
-      logger.info(`🚀 Starting comprehensive search: ${keyword} in ${location}`);
+      logger.info(`Starting comprehensive search: ${keyword} in ${location}`);
       
       // Step 1: Text search for national results
       const textResults = await this.textSearch(keyword, location);
-      logger.info(`📍 Text search returned ${textResults.length} results`);
+      logger.info(`Text search returned ${textResults.length} results`);
       
       // Limit to first 10 results for performance
       const limitedResults = textResults.slice(0, 10);
       
       // Step 2: Get details (especially website) for each company - parallel requests with delay
-      logger.info(`🌐 Fetching website details for ${limitedResults.length} companies...`);
+      logger.info(`Fetching website details for ${limitedResults.length} companies...`);
       
       const companies = [];
       const batchSize = 3; // Parallel requests per batch
@@ -171,7 +160,7 @@ class GooglePlacesService {
         const batchPromises = batch.map(async (result) => {
           try {
             const details = await this.getPlaceDetails(result.place_id);
-            logger.debug(`✓ Got details for: ${details?.name || result.name}`);
+            logger.debug(`Got details for: ${details?.name || result.name}`);
             return {
               placeId: result.place_id,
               name: details?.name || result.name || 'N/A',
@@ -185,12 +174,8 @@ class GooglePlacesService {
               businessStatus: details?.businessStatus || 'UNKNOWN',
             };
           } catch (error) {
-            logger.error(`❌ Failed to get details for ${result.name}:`, { 
-              name: result.name,
+            logger.error(`Failed to get details for ${result.name}: ${error.message}`, { 
               placeId: result.place_id,
-              error: error.message,
-              statusCode: error.response?.status,
-              apiStatus: error.response?.data?.status
             });
             return {
               placeId: result.place_id,
@@ -216,14 +201,10 @@ class GooglePlacesService {
         }
       }
       
-      logger.info(`✅ Comprehensive search completed: ${companies.length} companies with websites`);
+      logger.info(`Comprehensive search completed: ${companies.length} companies`);
       return companies;
     } catch (error) {
-      logger.error('❌ Comprehensive search failed', { 
-        keyword, 
-        location, 
-        error: error.message 
-      });
+      logger.error(`Comprehensive search failed: ${error.message}`, { keyword, location });
       throw error;
     }
   }

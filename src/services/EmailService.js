@@ -1,21 +1,22 @@
 import nodemailer from 'nodemailer';
 import axios from 'axios';
 import logger from '../utils/logger.js';
+import config from '../config.js';
 import MockEmailService from './MockEmailService.js';
 
 class EmailService {
   constructor() {
     // Check if mock mode is enabled
-    this.mockMode = process.env.MOCK_EMAIL_MODE === 'true';
+    this.mockMode = config.mockEmailMode;
     if (this.mockMode) {
-      logger.info('🎭 MOCK EMAIL MODE ENABLED - Emails will be simulated');
+      logger.info('Mock email mode enabled - emails will be simulated');
     }
 
     // Mailjet SMTP Configuration
-    this.apiKey = process.env.MAILJET_API_KEY;
-    this.apiSecret = process.env.MAILJET_API_SECRET;
-    this.fromEmail = process.env.MAILJET_FROM_EMAIL || `${this.apiKey}@incoming.mailjet.com`;
-    this.fromName = 'SourceBot - Demande de Devis';
+    this.apiKey = config.mailjet.apiKey;
+    this.apiSecret = config.mailjet.apiSecret;
+    this.fromEmail = config.mailjet.fromEmail;
+    this.fromName = config.mailjet.fromName;
 
     // Mailjet API Base URL
     this.mailjetApiUrl = 'https://api.mailjet.com/v3.1/send';
@@ -23,7 +24,7 @@ class EmailService {
 
     if (!this.mockMode) {
       if (!this.apiKey || !this.apiSecret) {
-        logger.error('❌ Mailjet credentials missing (MAILJET_API_KEY, MAILJET_API_SECRET)');
+        logger.error('Mailjet credentials missing (MAILJET_API_KEY, MAILJET_API_SECRET)');
       }
 
       // Configure Nodemailer with Mailjet SMTP
@@ -40,9 +41,9 @@ class EmailService {
       // Verify connection
       this.transporter.verify((error) => {
         if (error) {
-          logger.error('❌ Mailjet connection failed:', error);
+          logger.error(`Mailjet connection failed: ${error.message}`);
         } else {
-          logger.info('✅ Mailjet SMTP connection ready');
+          logger.info('Mailjet SMTP connection ready');
         }
       });
     }

@@ -9,11 +9,12 @@ const logger = winston.createLogger({
   format: winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.errors({ stack: true }),
-    winston.format.printf(({ level, message, timestamp, stack }) => {
+    winston.format.printf(({ level, message, timestamp, stack, ...meta }) => {
+      const metaStr = Object.keys(meta).length > 0 ? JSON.stringify(meta) : '';
       if (stack) {
-        return `${timestamp} [${level.toUpperCase()}]: ${message}\n${stack}`;
+        return `${timestamp} [${level.toUpperCase()}]: ${message}\n${stack}${metaStr ? '\n' + metaStr : ''}`;
       }
-      return `${timestamp} [${level.toUpperCase()}]: ${message}`;
+      return `${timestamp} [${level.toUpperCase()}]: ${message}${metaStr ? ' ' + metaStr : ''}`;
     }),
   ),
   transports: [

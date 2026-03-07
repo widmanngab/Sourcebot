@@ -89,20 +89,20 @@ class MockEmailService {
       });
 
       // Also display in detailed format
-      console.log('\n🎭 ========== MOCK EMAIL LOG ==========');
-      console.log(`📧 To: ${mailData.to[0].email}`);
-      console.log(`👤 From: ${mailData.from.email}`);
-      console.log(`📝 Subject: ${mailData.subject}`);
-      console.log(`💬 Message preview: ${(mailData.textPart || '').substring(0, 100)}...`);
+      console.log('\n◐ ========== MOCK EMAIL LOG ==========' );
+      console.log(`● To: ${mailData.to[0].email}`);
+      console.log(`○ From: ${mailData.from.email}`);
+      console.log(`⊞ Subject: ${mailData.subject}`);
+      console.log(`▬ Message preview: ${(mailData.textPart || '').substring(0, 100)}...`);
       if (mailData.attachments?.length) {
-        console.log(`📎 Attachments: ${mailData.attachments.length} file(s)`);
+        console.log(`▪ Attachments: ${mailData.attachments.length} file(s)`);
       }
-      console.log(`⏰ Mock ID: ${mockResponse.UUID}`);
-      console.log('🎭 ====================================\n');
+      console.log(`◐ Mock ID: ${mockResponse.UUID}`);
+      console.log('◐ ====================================\n');
 
       return mockResponse;
     } catch (error) {
-      logger.error('❌ Mock email error:', error);
+      logger.error('✗ Mock email error:', error);
       throw new Error('Failed to simulate email send');
     }
   }

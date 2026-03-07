@@ -1,12 +1,13 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import logger from '../utils/logger.js';
+import config from '../config.js';
 
 class ScrapingService {
   constructor() {
-    this.timeout = parseInt(process.env.SCRAPING_TIMEOUT || '10000', 10);
-    this.delay = parseInt(process.env.SCRAPING_DELAY_MS || '3000', 10);
-    this.maxParallel = parseInt(process.env.SCRAPING_MAX_PARALLEL || '10', 10);
+    this.timeout = config.scraping.timeout;
+    this.delay = config.scraping.delayMs;
+    this.maxParallel = config.scraping.maxParallel;
     
     // Regex patterns for email extraction
     this.emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
@@ -19,11 +20,11 @@ class ScrapingService {
   async scrapeEmail(url) {
     try {
       if (!url || !url.startsWith('http')) {
-        logger.warn(`⚠️ Invalid URL: ${url}`);
+        logger.warn(`Invalid URL: ${url}`);
         return [];
       }
 
-      logger.info(`🔍 Scraping: ${url}`);
+      logger.info(`Scraping: ${url}`);
 
       const response = await axios.get(url, {
         timeout: this.timeout,
@@ -67,11 +68,11 @@ class ScrapingService {
       }
 
       const emailArray = Array.from(emails);
-      logger.info(`✅ Found ${emailArray.length} emails on ${url}`);
+      logger.info(`Found ${emailArray.length} emails on ${url}`);
 
       return emailArray;
     } catch (error) {
-      logger.warn(`⚠️ Scraping failed for ${url}: ${error.message}`);
+      logger.warn(`Scraping failed for ${url}: ${error.message}`);
       return [];
     }
   }
@@ -115,7 +116,7 @@ class ScrapingService {
           }
 
           if (emails.size > 0) {
-            logger.info(`✅ Found emails on ${contactUrl}`);
+            logger.info(`Found emails on ${contactUrl}`);
             break;
           }
         } catch (err) {
@@ -126,7 +127,7 @@ class ScrapingService {
 
       return Array.from(emails);
     } catch (error) {
-      logger.warn(`⚠️ Contact page scraping failed: ${error.message}`);
+      logger.warn(`Contact page scraping failed: ${error.message}`);
       return [];
     }
   }
@@ -157,7 +158,7 @@ class ScrapingService {
    */
   async scrapeMultiple(urls) {
     try {
-      logger.info(`🔄 Scraping ${urls.length} URLs (max parallel: ${this.maxParallel})`);
+      logger.info(`Scraping ${urls.length} URLs (max parallel: ${this.maxParallel})`);
 
       const results = [];
       const chunks = this.chunkArray(urls, this.maxParallel);
@@ -175,10 +176,10 @@ class ScrapingService {
         }
       }
 
-      logger.info(`✅ Scraping complete: ${results.length} websites processed`);
+      logger.info(`Scraping complete: ${results.length} websites processed`);
       return results;
     } catch (error) {
-      logger.error('❌ Batch scraping failed', { error: error.message });
+      logger.error(`Batch scraping failed: ${error.message}`);
       return [];
     }
   }
@@ -204,14 +205,14 @@ class ScrapingService {
       
       const disallowAll = response.data.includes('Disallow: /');
       if (disallowAll) {
-        logger.warn(`⚠️ robots.txt disallows scraping: ${domain}`);
+        logger.warn(`robots.txt disallows scraping: ${domain}`);
         return false;
       }
 
-      logger.info(`✅ robots.txt allows scraping: ${domain}`);
+      logger.info(`robots.txt allows scraping: ${domain}`);
       return true;
     } catch (error) {
-      logger.info(`ℹ️ No robots.txt found (will proceed): ${domain}`);
+      logger.info(`No robots.txt found (will proceed): ${domain}`);
       return true;
     }
   }

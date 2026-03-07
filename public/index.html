@@ -45,7 +45,7 @@
         <div class="hero-blob hero-blob-1"></div>
         <div class="hero-blob hero-blob-2"></div>
         <div class="hero-content">
-          <span class="hero-tag">⚡ Prospection intelligente</span>
+          <span class="hero-tag">▶ Prospection intelligente</span>
           <h2 class="hero-title">Trouvez et contactez vos <span class="text-gradient">sous-traitants</span> en un clic.</h2>
           <p class="hero-desc">SourceBot automatise la recherche d'entreprises, l'extraction d'emails et l'envoi de demandes de devis personnalisées.</p>
         </div>
@@ -79,7 +79,7 @@
         <section class="step-section active" id="step1-section">
           <section class="form-container glass-card">
             <div class="card-header-bar">
-              <span class="card-icon">🔍</span>
+              <span class="card-icon">◆</span>
               <div>
                 <h2>Trouvez des Entreprises</h2>
                 <p class="card-subtitle">Étape 1 — Recherche par secteur et localisation</p>
@@ -127,7 +127,7 @@
               </div>
 
               <button type="submit" class="btn-primary btn-glow">
-                <span class="btn-icon">⚡</span> Rechercher & Scraper Emails
+                <span class="btn-icon">▶</span> Rechercher & Scraper Emails
               </button>
             </form>
           </section>
@@ -142,15 +142,15 @@
               <h2>Résultats de la Recherche</h2>
               <div class="results-stats">
                 <span class="stat stat-purple">
-                  <span class="stat-icon">📍</span>
+                  <span class="stat-icon">◇</span>
                   <strong id="totalCompanies">0</strong> entreprises
                 </span>
                 <span class="stat stat-green">
-                  <span class="stat-icon">📧</span>
+                  <span class="stat-icon">●</span>
                   <strong id="companiesWithEmails">0</strong> emails
                 </span>
                 <span class="stat stat-orange">
-                  <span class="stat-icon">⏱️</span>
+                  <span class="stat-icon">◐</span>
                   <strong id="duration">0</strong>s
                 </span>
               </div>
@@ -159,7 +159,7 @@
             
             <div class="step-navigation">
               <button type="button" class="btn-primary" id="continueToStep2">
-                Continuer vers le devis →
+                Continuer vers le devis ▶
               </button>
             </div>
           </section>
@@ -171,7 +171,7 @@
         <section class="step-section" id="step2-section">
           <section class="form-container glass-card">
             <div class="card-header-bar">
-              <span class="card-icon">📋</span>
+              <span class="card-icon">▬</span>
               <div>
                 <h2>Décrivez votre Demande</h2>
                 <p class="card-subtitle">Étape 2 — Informations client et détails du projet</p>
@@ -180,7 +180,7 @@
             
             <form id="quoteDetailsForm" class="quote-form">
               <fieldset class="fieldset-modern">
-                <legend><span class="legend-icon">👤</span> Vos Informations</legend>
+                <legend><span class="legend-icon">○</span> Vos Informations</legend>
                 <div class="form-row">
                   <div class="form-group floating-label">
                     <input type="text" id="clientFirstName" name="firstName" placeholder=" " required />
@@ -198,7 +198,7 @@
               </fieldset>
 
               <fieldset class="fieldset-modern">
-                <legend><span class="legend-icon">📝</span> Détails de votre Demande</legend>
+                <legend><span class="legend-icon">⊞</span> Détails de votre Demande</legend>
                 <div class="form-group">
                   <label for="projectDescription">Description technique et détaillée *</label>
                   <textarea
@@ -214,7 +214,7 @@
               </fieldset>
 
               <fieldset class="fieldset-modern">
-                <legend><span class="legend-icon">📎</span> Documents & Fichiers</legend>
+                <legend><span class="legend-icon">▪</span> Documents & Fichiers</legend>
                 <div class="form-group">
                   <label for="projectFiles">Téléchargez vos documents</label>
                   <p class="helper-text">PDF, PNG, JPG, DWG, STEP, IGES, ZIP — Max 25MB/fichier — Max 10 fichiers</p>
@@ -227,7 +227,7 @@
                       accept=".pdf,.png,.jpg,.dwg,.step,.iges,.zip"
                     />
                     <div class="file-upload-label">
-                      <span class="file-upload-icon">📁</span>
+                      <span class="file-upload-icon">◻</span>
                       <span>Glissez vos fichiers ici ou <strong>parcourir</strong></span>
                     </div>
                   </div>
@@ -243,7 +243,7 @@
               </fieldset>
 
               <fieldset class="fieldset-modern">
-                <legend><span class="legend-icon">🏢</span> Entreprises Trouvées</legend>
+                <legend><span class="legend-icon">⊞</span> Entreprises Trouvées</legend>
                 <div class="form-group">
                   <label for="companiesDropdown">Sélectionnez votre région/entreprises</label>
                   <select id="companiesDropdown" name="companies">
@@ -255,10 +255,10 @@
 
               <div class="step-navigation">
                 <button type="button" class="btn-secondary" id="backToStep1">
-                  ← Retour
+                  ◀ Retour
                 </button>
                 <button type="button" class="btn-primary" id="continueToStep3">
-                  Aperçu Email →
+                  Aperçu Email ▶
                 </button>
               </div>
             </form>
@@ -269,7 +269,7 @@
         <section class="step-section" id="step3-section">
           <section class="form-container glass-card">
             <div class="card-header-bar">
-              <span class="card-icon">✉️</span>
+              <span class="card-icon">✎</span>
               <div>
                 <h2>Aperçu du Mail</h2>
                 <p class="card-subtitle">Étape 3 — Personnalisez votre email avant envoi</p>
@@ -292,21 +292,21 @@
               </div>
 
               <div class="email-files" id="emailFilesSection" style="display: none;">
-                <h4>📎 Fichiers joints</h4>
+                <h4>▪ Fichiers joints</h4>
                 <div id="emailFilesList" class="email-files-list"></div>
               </div>
 
               <div class="email-info">
-                <p>📌 <small>Modifiez ce modèle librement. Les variantes seront auto-générées pour chaque entreprise.</small></p>
+                <p>◆ <small>Modifiez ce modèle librement. Les variantes seront auto-générées pour chaque entreprise.</small></p>
               </div>
             </div>
 
             <div class="step-navigation">
               <button type="button" class="btn-secondary" id="backToStep2">
-                ← Retour
+                ◀ Retour
               </button>
               <button type="button" class="btn-primary" id="continueToStep4">
-                Sélection & Envoi →
+                Sélection & Envoi ▶
               </button>
             </div>
           </section>
@@ -316,7 +316,7 @@
         <section class="step-section" id="step4-section">
           <section class="form-container glass-card">
             <div class="card-header-bar">
-              <span class="card-icon">🚀</span>
+              <span class="card-icon">▶</span>
               <div>
                 <h2>Sélection & Envoi</h2>
                 <p class="card-subtitle">Étape 4 — Choisissez les destinataires et lancez l'envoi</p>
@@ -338,10 +338,10 @@
 
             <div class="step-navigation">
               <button type="button" class="btn-secondary" id="backToStep3">
-                ← Retour
+                ◀ Retour
               </button>
               <button type="button" class="btn-primary btn-glow" id="sendQuotes">
-                🚀 Envoyer les Demandes
+                ▶ Envoyer les Demandes
               </button>
             </div>
 
@@ -397,7 +397,7 @@
       </main>
 
       <footer>
-        <p>&copy; 2026 SourceBot — Développé avec ❤️ pour la prospection B2B</p>
+        <p>&copy; 2026 SourceBot — Développé avec passion pour la prospection B2B</p>
       </footer>
     </div>
 

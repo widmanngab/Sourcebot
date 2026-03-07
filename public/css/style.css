@@ -360,10 +360,13 @@ p { color: var(--text-mid); line-height: 1.7; }
 
 .floating-label input:focus + label,
 .floating-label input:not(:placeholder-shown) + label {
-  top: 0.3rem;
-  font-size: 0.7rem;
+  top: -0.55rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--primary);
+  background: var(--bg-card);
+  padding: 0 0.4rem;
+  left: 0.75rem;
 }
 
 .floating-label input:focus {

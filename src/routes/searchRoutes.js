@@ -1,5 +1,7 @@
 import express from 'express';
 import SearchController from '../controllers/searchController.js';
+import { validateBody } from '../middleware/validation.js';
+import config from '../config.js';
 
 const router = express.Router();
 const searchController = new SearchController();
@@ -9,13 +11,11 @@ const searchController = new SearchController();
  * Get configuration info (including test mode)
  */
 router.get('/config', (req, res) => {
-  const testMode = process.env.TEST_MODE === 'true';
-  const testEmail = process.env.TEST_EMAIL || 'fourchettetest@gmail.com';
-  
   return res.json({
-    testMode,
-    testEmail: testMode ? testEmail : null,
-    environment: process.env.NODE_ENV || 'development',
+    testMode: config.testMode,
+    testEmail: config.testMode ? config.testEmail : null,
+    environment: config.nodeEnv,
+    mockEmailMode: config.mockEmailMode,
   });
 });
 
@@ -24,13 +24,17 @@ router.get('/config', (req, res) => {
  * Check API configuration and credentials
  */
 router.get('/diagnostic', (req, res) => {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  const apiKey = config.googlePlacesApiKey;
   return res.json({
     status: 'ok',
     googlePlacesApiConfigured: !!apiKey,
-    googlePlacesApiKeyPreview: apiKey ? `${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 5)}` : 'NOT SET',
-    environment: process.env.NODE_ENV || 'development',
+    googlePlacesApiKeyPreview: apiKey 
+      ? `${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 5)}` 
+      : 'NOT SET',
+    environment: config.nodeEnv,
     nodeVersion: process.version,
+    testMode: config.testMode,
+    mockEmailMode: config.mockEmailMode,
   });
 });
 
@@ -38,35 +42,45 @@ router.get('/diagnostic', (req, res) => {
  * GET /api/test-google-places
  * Test Google Places API with a simple query
  */
-router.get('/test-google-places', async (req, res) => {
-  try {
-    const testResults = await searchController.testGooglePlaces();
-    return res.json({
-      status: 'success',
-      test: 'Google Places API connectivity test',
-      results: testResults,
-    });
-  } catch (error) {
-    return res.json({
-      status: 'error',
-      test: 'Google Places API connectivity test',
-      error: error.message,
-      details: error.response?.data || 'No additional details available',
-    });
-  }
-});
+router.get('/test-google-places', (req, res, next) => 
+  searchController.testGooglePlaces(req, res, next)
+);
 
 /**
  * POST /api/search
- * Search for companies
+ * Search for companies and scrape their emails
  * Body: { keyword, location, radius }
  */
-router.post('/search', (req, res) => searchController.search(req, res));
+router.post('/search', 
+  validateBody('searchRequest'),
+  (req, res, next) => searchController.search(req, res, next)
+);
+
+/**
+ * POST /api/scrape-emails
+ * Alias for /api/search (backward compatibility)
+ */
+router.post('/scrape-emails',
+  validateBody('searchRequest'),
+  (req, res, next) => searchController.search(req, res, next)
+);
+
+/**
+ * POST /api/scrape-url
+ * Scrape emails from a single URL
+ * Body: { url }
+ */
+router.post('/scrape-url',
+  validateBody('scrapeRequest'),
+  (req, res, next) => searchController.scrapeUrl(req, res, next)
+);
 
 /**
  * GET /api/place/:placeId
- * Get place details
+ * Get place details by Google Place ID
  */
-router.get('/place/:placeId', (req, res) => searchController.getPlaceDetails(req, res));
+router.get('/place/:placeId', 
+  (req, res, next) => searchController.getPlaceDetails(req, res, next)
+);
 
 export default router;
