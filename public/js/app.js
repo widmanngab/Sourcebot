@@ -27,6 +27,7 @@ const state = {
     files: [],
   },
   emailTemplate: '',
+  emailSubject: '',
   testMode: false,
   testEmail: null,
 };
@@ -290,11 +291,33 @@ function handleFileUpload(e) {
 // STEP 3: EMAIL TEMPLATE
 // =============================================================================
 
+function generateEmailSubject() {
+  const description = state.quoteDetails.description.trim();
+  if (!description) {
+    return 'Demande de devis';
+  }
+
+  // Extract keywords from description (first 50 characters or first meaningful phrase)
+  const firstLine = description.split('\n')[0].trim();
+  const subject = firstLine.length > 50 
+    ? firstLine.substring(0, 50) + '...' 
+    : firstLine;
+
+  return `Demande de devis - ${subject}`;
+}
+
 function setupEmailTemplate() {
   const textarea = document.getElementById('emailTemplate');
   textarea.addEventListener('change', (e) => {
     state.emailTemplate = e.target.value;
   });
+
+  const subjectInput = document.getElementById('emailSubjectInput');
+  if (subjectInput) {
+    subjectInput.addEventListener('change', (e) => {
+      state.emailSubject = e.target.value;
+    });
+  }
 
   // Regenerate email button
   const regenerateBtn = document.getElementById('regenerateEmailBtn');
@@ -614,9 +637,9 @@ async function handleSendQuotes() {
     return;
   }
 
-  const emailSubject = document.getElementById('emailSubjectInput').value.trim();
+  const emailSubject = state.emailSubject.trim();
   if (!emailSubject) {
-    showError('Veuillez remplir l\'objet du mail');
+    showError('Veuillez remplir l\'objet du mail dans l\'étape 3');
     return;
   }
 
@@ -777,8 +800,11 @@ function setupStepNavigation() {
     state.quoteDetails.email = document.getElementById('clientEmail').value;
     state.quoteDetails.description = document.getElementById('projectDescription').value;
 
-    // Generate email template
+    // Generate email subject and template
+    state.emailSubject = generateEmailSubject();
     state.emailTemplate = generateEmailTemplate();
+    
+    document.getElementById('emailSubjectInput').value = state.emailSubject;
     document.getElementById('emailTemplate').value = state.emailTemplate;
 
     // Show attached files
@@ -789,7 +815,8 @@ function setupStepNavigation() {
 
   // Step 3 -> Step 4
   document.getElementById('continueToStep4').addEventListener('click', () => {
-    // Save email template
+    // Save email template and subject
+    state.emailSubject = document.getElementById('emailSubjectInput').value;
     state.emailTemplate = document.getElementById('emailTemplate').value;
 
     // Display companies for selection
