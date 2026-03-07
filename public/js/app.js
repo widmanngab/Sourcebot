@@ -158,12 +158,16 @@ function createCompanyCard(company) {
 
   card.innerHTML = `
     <div class="company-header" onclick="toggleCompanyDetails('${cardId}')">
-      <div class="company-name-section">
-        <span class="toggle-icon">▶</span>
-        <div class="company-name">${company.name || 'N/A'}</div>
-        ${hasEmails ? '<span class="email-badge">● Email trouvé</span>' : ''}
+      <div class="company-header-top">
+        <div class="company-name-section">
+          <span class="toggle-icon">▶</span>
+          <div class="company-name">${company.name || 'N/A'}</div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+          ${hasEmails ? '<span class="email-badge">● Email trouvé</span>' : ''}
+          ${company.rating ? `<div class="company-rating">⭐ ${company.rating}</div>` : ''}
+        </div>
       </div>
-      ${company.rating ? `<div class="company-rating">⭐ ${company.rating}</div>` : ''}
     </div>
     <div class="company-details" id="${cardId}" style="display: none;">
       <div class="company-info-item">
@@ -190,7 +194,8 @@ function createCompanyCard(company) {
 
 function toggleCompanyDetails(cardId) {
   const details = document.getElementById(cardId);
-  const icon = details.previousElementSibling.querySelector('.toggle-icon');
+  const header = details.previousElementSibling;
+  const icon = header.querySelector('.toggle-icon');
   if (details.style.display === 'none') {
     details.style.display = 'block';
     icon.textContent = '▼';
