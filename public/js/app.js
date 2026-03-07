@@ -562,14 +562,25 @@ function displayCompaniesCheckboxes() {
   const list = document.getElementById('companiesList');
   list.innerHTML = '';
 
-  state.searchResults.forEach((company, index) => {
+  // Filter: only companies with emails
+  const companiesWithEmails = state.searchResults.filter(company => company.emails && company.emails.length > 0);
+
+  if (companiesWithEmails.length === 0) {
+    list.innerHTML = '<div class="empty-state"><p style="color: #ef4444;">◆ Aucune entreprise avec email trouvée. Retournez à l\'étape 1 pour refaire une recherche.</p></div>';
+    return;
+  }
+
+  companiesWithEmails.forEach((company) => {
+    // Find original index in searchResults
+    const originalIndex = state.searchResults.indexOf(company);
+    
     const item = document.createElement('div');
     item.className = 'company-checkbox-item';
 
     const emails = company.emails && company.emails.length > 0 ? company.emails.join(', ') : 'Pas d\'email';
 
     item.innerHTML = `
-      <input type="checkbox" data-index="${index}" class="company-select-checkbox">
+      <input type="checkbox" data-index="${originalIndex}" class="company-select-checkbox">
       <div class="company-checkbox-info">
         <div class="company-checkbox-name">${company.name}</div>
         <div class="company-checkbox-email">${emails}</div>
@@ -579,9 +590,9 @@ function displayCompaniesCheckboxes() {
     const checkbox = item.querySelector('input[type="checkbox"]');
     checkbox.addEventListener('change', (e) => {
       if (e.target.checked) {
-        state.selectedCompanies.add(index);
+        state.selectedCompanies.add(originalIndex);
       } else {
-        state.selectedCompanies.delete(index);
+        state.selectedCompanies.delete(originalIndex);
       }
       updateSelectionSummary();
     });
@@ -591,13 +602,21 @@ function displayCompaniesCheckboxes() {
 }
 
 function updateSelectionSummary() {
+  // Count only companies with emails
+  const companiesWithEmails = state.searchResults.filter(company => company.emails && company.emails.length > 0);
   document.getElementById('selectedCount').textContent = state.selectedCompanies.size;
-  document.getElementById('totalCount').textContent = state.searchResults.length;
+  document.getElementById('totalCount').textContent = companiesWithEmails.length;
 }
 
 async function handleSendQuotes() {
   if (state.selectedCompanies.size === 0) {
     showError('Veuillez sélectionner au moins une entreprise');
+    return;
+  }
+
+  const emailSubject = document.getElementById('emailSubjectInput').value.trim();
+  if (!emailSubject) {
+    showError('Veuillez remplir l\'objet du mail');
     return;
   }
 
@@ -626,6 +645,7 @@ async function handleSendQuotes() {
           email: state.quoteDetails.email,
           description: state.quoteDetails.description,
         },
+        subject: emailSubject,
         attachments: [],
         useAlternateDomain: false,
       };

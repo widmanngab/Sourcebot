@@ -11,11 +11,11 @@ class EmailController {
   /**
    * Send quote request email to a company with variation
    * POST /api/email/send
-   * Body: { company, clientInfo, attachments, useAlternateDomain }
+   * Body: { company, clientInfo, subject, attachments, useAlternateDomain }
    */
   async sendQuote(req, res) {
     try {
-      const { company, clientInfo, attachments = [], useAlternateDomain = false } = req.body;
+      const { company, clientInfo, subject = null, attachments = [], useAlternateDomain = false } = req.body;
 
       // Debug logging
       logger.info(`📨 Email send request received:`, {
@@ -69,6 +69,12 @@ class EmailController {
 
       // Generate email variation
       const emailContent = this.variationService.generateEmailVariation(company, clientInfo);
+      
+      // Use provided subject if available, otherwise use generated subject
+      if (subject) {
+        emailContent.subject = subject;
+      }
+      
       const senderInfo = this.variationService.getSenderEmail(useAlternateDomain);
 
       // Déterminer l'email destinataire
