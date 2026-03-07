@@ -295,9 +295,20 @@ function setupEmailTemplate() {
   textarea.addEventListener('change', (e) => {
     state.emailTemplate = e.target.value;
   });
+
+  // Regenerate email button
+  const regenerateBtn = document.getElementById('regenerateEmailBtn');
+  if (regenerateBtn) {
+    regenerateBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const newTemplate = generateEmailTemplate(true);
+      textarea.value = newTemplate;
+      state.emailTemplate = newTemplate;
+    });
+  }
 }
 
-function generateEmailTemplate() {
+function generateEmailTemplate(isAlternate = false) {
   const { firstName, lastName, description } = state.quoteDetails;
   
   // Format the description into bullet points
@@ -308,15 +319,43 @@ function generateEmailTemplate() {
     ? `\n\nDocuments joints :\n${state.quoteDetails.files.map(f => `• ${f.name}`).join('\n')}`
     : '';
 
+  // Introductions
+  const introductions = [
+    'Je vous contacte afin d\'obtenir un devis pour un projet.',
+    'Je vous contacte pour demander un devis concernant un projet.',
+    'J\'aurais un projet pour lequel j\'aimerais obtenir votre devis.',
+    'Nous avons un projet et souhaiterions obtenir un devis de votre part.'
+  ];
+
+  // Closings
+  const closings = [
+    'Je reste à votre disposition pour tout complément d\'information ou clarification.',
+    'N\'hésitez pas à me contacter pour d\'éventuels ajustements ou questions.',
+    'Merci de votre attention. Je serais heureux d\'avoir votre retour.',
+    'Je vous remercie de l\'attention que vous porterez à cette demande.'
+  ];
+
+  // Select introduction and closing
+  let introduction, closing;
+  if (isAlternate) {
+    // Pick random indices for alternate version
+    introduction = introductions[Math.floor(Math.random() * introductions.length)];
+    closing = closings[Math.floor(Math.random() * closings.length)];
+  } else {
+    // Use default (first) option
+    introduction = introductions[0];
+    closing = closings[0];
+  }
+
   const template = `Bonjour,
 
-Je vous contacte afin d'obtenir un devis pour un projet.
+${introduction}
 
 Voici les éléments techniques détaillant ma demande :
 
 ${bulletPoints}${filesInfo}
 
-Je reste à votre disposition pour tout complément d'information ou clarification.
+${closing}
 
 Cordialement,
 ${firstName} ${lastName}
