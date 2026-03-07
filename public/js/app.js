@@ -342,6 +342,42 @@ function cleanTechnicalDescription(text) {
   }).join('\n');
 }
 
+function reformatTechnicalPoints(bulletText, shouldVary = false) {
+  // Extract bullet points
+  const lines = bulletText.split('\n')
+    .map(line => line.replace(/^•\s*/, '').trim())
+    .filter(line => line.length > 0);
+
+  if (!shouldVary || lines.length <= 1) {
+    return bulletText;
+  }
+
+  // Shuffle array randomly
+  const shuffled = lines.sort(() => Math.random() - 0.5);
+
+  // Optionally reformulate some lines with variations
+  const reformulated = shuffled.map((line, index) => {
+    const shouldReformulate = Math.random() > 0.5; // 50% chance to reformulate
+    
+    if (shouldReformulate && index % 2 === 0) {
+      // Transform "X dimensions" to "Dimensions: X" format
+      // Or add slight variations
+      if (line.toLowerCase().includes('dimensions') || 
+          line.match(/\d+\s*(cm|mm|m|kg)/i)) {
+        // Already good format, keep it
+        return line;
+      } else if (line.match(/^(nous|on|je)\s+/i)) {
+        // Remove subject prefix for variety
+        return line.replace(/^(nous|on|je)\s+/i, '').replace(/^(avons?|ai)\s+/i, '');
+      }
+    }
+    
+    return line;
+  });
+
+  return reformulated.map(line => `• ${line}`).join('\n');
+}
+
 function generateEmailTemplate(isAlternate = false) {
   const { firstName, lastName, description } = state.quoteDetails;
   
@@ -350,7 +386,12 @@ function generateEmailTemplate(isAlternate = false) {
   
   // Format the description into bullet points
   const lines = cleanedDescription.split('\n').filter(line => line.trim());
-  const bulletPoints = lines.map(line => `• ${line.trim()}`).join('\n');
+  let bulletPoints = lines.map(line => `• ${line.trim()}`).join('\n');
+  
+  // If regenerating, reformulate the technical points
+  if (isAlternate) {
+    bulletPoints = reformatTechnicalPoints(bulletPoints, true);
+  }
 
   const filesInfo = state.quoteDetails.files && state.quoteDetails.files.length > 0 
     ? `\n\nDocuments joints :\n${state.quoteDetails.files.map(f => `• ${f.name}`).join('\n')}`
