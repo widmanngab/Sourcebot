@@ -1,4 +1,4 @@
-import 'dotenv/config.js';
+﻿import 'dotenv/config.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
@@ -19,24 +19,9 @@ const PORT = config.port;
 // Trust proxy (needed for Railway, Vercel, etc)
 app.set('trust proxy', 1);
 
-// CORS - Enable specific origins for production
+// CORS - Allow all origins
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'https://sourcebot-inky.vercel.app',
-      'http://localhost:3000',
-      'https://sourcebot-production.up.railway.app'
-    ];
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: false,
