@@ -19,18 +19,26 @@ const PORT = config.port;
 // Trust proxy (needed for Railway, Vercel, etc)
 app.set('trust proxy', 1);
 
-// CORS - Allow all origins
-app.use(cors({
+// CORS config
+const corsOptions = {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: false,
   optionsSuccessStatus: 200,
-}));
+};
+
+// Handle OPTIONS preflight explicitly
+app.options('*', cors(corsOptions));
+
+// CORS - Allow all origins
+app.use(cors(corsOptions));
 
 // Middleware de sécurité
 app.use(helmet({
   crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginEmbedderPolicy: false,
 }));
 
 // Request logging middleware
