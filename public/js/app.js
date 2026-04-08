@@ -1,4 +1,4 @@
-// SourceBot Client - Application Frontend with 4-Stage Devis Workflow
+﻿// SourceBot Client - Application Frontend with 4-Stage Devis Workflow
 
 // Configuration API - Déterminer l'URL de l'API selon l'environnement
 let API_URL;
@@ -6,9 +6,8 @@ let API_URL;
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
   API_URL = 'http://localhost:3000';
 } else {
-  // Production: Railway backend URL
-  const RAILWAY_BACKEND_URL = 'https://sourcebot-production.up.railway.app';
-  API_URL = RAILWAY_BACKEND_URL;
+  // Production: use relative URL so Vercel proxies to Railway (avoids CORS)
+  API_URL = '';
 }
 
 // =============================================================================

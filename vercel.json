@@ -1,7 +1,13 @@
-{
+﻿{
   "version": 2,
   "buildCommand": "",
   "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://sourcebot-production.up.railway.app/api/:path*"
+    }
+  ],
   "github": {
     "silent": true
   }
