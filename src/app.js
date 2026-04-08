@@ -19,9 +19,24 @@ const PORT = config.port;
 // Trust proxy (needed for Railway, Vercel, etc)
 app.set('trust proxy', 1);
 
-// CORS - Enable ALL origins for now (demo/test mode)
+// CORS - Enable specific origins for production
 app.use(cors({
-  origin: '*',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'https://sourcebot-inky.vercel.app',
+      'http://localhost:3000',
+      'https://sourcebot-production.up.railway.app'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: false,
